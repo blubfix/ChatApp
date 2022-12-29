@@ -44,7 +44,7 @@ general_timeout = 5
 # general server timeout message
 server_timeout_message = 'Couldnt build up a connection to server.'
 
-# success messages
+# success and error messages
 success_message_for_receiver = 'The users exist'
 error_message_for_receiver = 'The users doesnt exist'
 system_exit_success_message = 'End program was successful'
@@ -61,6 +61,7 @@ class Client:
     def delay_time_function(self):
         time.sleep(1)
 
+    # This method is used for adding receiver names to a message that is sent to server
     def add_receiver(self):
         self.name_of_receiver = self.name_of_receiver + ',' + input('What is the name of the receiving person: ')
         response = input('Do you want to sent the message to another person? (y/n) ')
@@ -168,8 +169,8 @@ class Client:
             send_message_socket.close()
             self.name_of_receiver = ''
             server_message = self.handle_server_answers()
-
-            if server_message == success_message_for_receiver:
+# In here something doesnt work
+            if server_message in success_message_for_receiver:
                 self.method_to_send_messages()
             elif server_message == error_message_for_receiver:
                 print(server_message)
