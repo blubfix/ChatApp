@@ -50,7 +50,6 @@ class Server:
     # The method update_list is used to send the updated user list to all others servers in the distributed system
     def update_list(self):
         update_list_send_socket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-        update_list_send_socket.setsockopt(SOL_SOCKET, SO_BROADCAST, 1)
 
     def receive_list_update(self):
         pass
