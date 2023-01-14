@@ -47,14 +47,14 @@ class Server:
     def __init__(self):
         self.user_list = []  # List with tupel of available users including name and address
         self.server_list = []  # List with the other Servers
-        self.leader = False  # Needed to enable leader methods and to make sure only the leader handles Round Robin
+        self.leader = True  # Needed to enable leader methods and to make sure only the leader handles Round Robin
         self.user_address_list = []  # A list with the addresses of users that are available
         self.user_name_list = []  # A list with the user names that are available
         self.list_of_receiver_of_messages = []  # needed to see who receives a message
 
     # The method update_list is used to send the updated user list to all others servers in the distributed system
     def update_list(self):
-        while self.leader:
+        while self.leader==True:
             sleep(5)
             if self.user_list:
                 update_list_send_socket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
@@ -73,7 +73,7 @@ class Server:
     # This method is used to listen to the user list that is sent by the leader every 10 second
     def receive_list_update(self):
         print('die socket hört jetzt auf den Broadcast')
-        while not self.leader:
+        while self.leader!= True:
             list_update_listener_socket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
             list_update_listener_socket.bind(('', list_update_broadcast_port))
 
