@@ -51,7 +51,8 @@ error_message_for_receiver = 'The users doesnt exist'
 
 # success messages
 success_message_for_receiver = 'The users exist'
-system_exit_success_message = 'End program was successful'
+system_exit_success_message = 'Your user was deleted on server'
+no_identity_message = 'You dont own an identity'
 
 
 class Client:
@@ -111,7 +112,6 @@ class Client:
             server_answer_socket.listen()
             timeout_for_serverconnection = 5
             server_answer_socket.settimeout(timeout_for_serverconnection)
-            print('Hier angekommen nach nachricht')
 
             connection, address = server_answer_socket.accept()
             while True:
@@ -226,7 +226,9 @@ class Client:
                 if multicast_get_message_socket.recv(multicast_message_buffer):
                     message = multicast_get_message_socket.recv(multicast_message_buffer)
                     str_message = str(message)
-                    print(str_message)
+                    str_message_splitted = str_message.split("'")
+                    print_message = str_message_splitted[1]
+                    print(print_message)
 
             except:
                 pass
@@ -236,7 +238,7 @@ class Client:
     def end_the_program(self):
         if self.own_identity is None:
             print('\n')
-            print(system_exit_success_message)
+            print(no_identity_message)
             print('\n')
         else:
             # Ask for server ip address with udp Broadcast
@@ -272,7 +274,7 @@ class Client:
             print('')
             print('1. Create an identity for the Server and other users ')
             print('2. Chat with an other user')
-            print('3. end program')
+            print('3. Disconnect from server')
             print('')
 
             choice = input('Your choice: ')
