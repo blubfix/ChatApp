@@ -53,6 +53,7 @@ error_message_for_receiver = 'The users doesnt exist'
 success_message_for_receiver = 'The users exist'
 system_exit_success_message = 'End program was successful'
 
+
 class Client:
     stop_event = threading.Event()
 
@@ -101,8 +102,6 @@ class Client:
         send_message = message.encode('ascii')
         send_the_message_socket.sendall(send_message)
         send_the_message_socket.close()
-        print('Show me')
-
 
     # Method that is needed for responding to tcp message sent by server to a Client
     def handle_server_answers(self):
@@ -221,10 +220,14 @@ class Client:
         multicast_get_message_socket.setsockopt(socket.IPPROTO_IP, socket.IP_ADD_MEMBERSHIP, mreq)
 
         while self.stop_event.is_set():
-            message = multicast_get_message_socket.recv(multicast_message_buffer)
-            str_message = str(message)
-            print(str_message)
+            try:
+                if multicast_get_message_socket.recv(multicast_message_buffer):
+                    message = multicast_get_message_socket.recv(multicast_message_buffer)
+                    str_message = str(message)
+                    print(str_message)
 
+            except:
+                pass
 
     # This method is used to end the program and ensure that the identity is removed from user List on server
     def end_the_program(self):
