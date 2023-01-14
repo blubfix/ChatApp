@@ -219,7 +219,9 @@ class Client:
 
         multicast_get_message_socket.setsockopt(socket.IPPROTO_IP, socket.IP_ADD_MEMBERSHIP, mreq)
 
-        while self.stop_event.is_set():
+        while True:
+            #print("thread running")
+            #print(self.stop_event.is_set())
             try:
                 if multicast_get_message_socket.recv(multicast_message_buffer):
                     message = multicast_get_message_socket.recv(multicast_message_buffer)
@@ -228,6 +230,7 @@ class Client:
 
             except:
                 pass
+        print("___________________DONE:_")
 
     # This method is used to end the program and ensure that the identity is removed from user List on server
     def end_the_program(self):
@@ -279,6 +282,8 @@ class Client:
             elif choice == '2':
                 self.send_a_message_to_other_clients()
             elif choice == '3':
-                self.end_the_program()
                 self.stop_event.set()
+                #print("Stop val")
+                #print(self.stop_event.is_set())
+                self.end_the_program()
                 break
