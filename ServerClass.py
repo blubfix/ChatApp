@@ -1,5 +1,6 @@
 # This Python file contains the class Server and a few variables that are needed
 # Imports needed for Server
+from socket import *
 import socket
 import sys
 from time import time, ctime, sleep
@@ -34,6 +35,7 @@ multicast_group_ip = '224.1.2.1'
 # Multicast Port
 multicast_port_for_messages = 52153
 
+
 # The Server class contains the functionalities of the server
 
 class Server:
@@ -50,6 +52,7 @@ class Server:
     # The method update_list is used to send the updated user list to all others servers in the distributed system
     def update_list(self):
         update_list_send_socket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+        update_list_send_socket.setsockopt(SOL_SOCKET, SO_BROADCAST, 1)
 
     def receive_list_update(self):
         pass
@@ -63,12 +66,13 @@ class Server:
         multicast_socket_for_messages = socket.socket(socket.AF_INET, socket.SOCK_DGRAM, socket.IPPROTO_UDP)
         multicast_socket_for_messages.setsockopt(socket.IPPROTO_IP, socket.IP_MULTICAST_TTL, ttl)
         send_message = message.encode('ascii')
+        addresses_to_send_to = ''
 
         for element in self.list_of_receiver_of_messages:
-            ip_addresses = element[1]
-            multicast_socket_for_messages.sendto(send_message, (ip_addresses, multicast_port_for_messages))
-            print(ip_addresses)
 
+            addresses_to_send_to = element[1]
+            multicast_socket_for_messages.sendto(send_message, (addresses_to_send_to, multicast_port_for_messages))
+            print(addresses_to_send_to)
 
     # This method is used to receive the message of a client that wants to sent a message to one or more other Clients
     def tcp_answer_client_about_receivers_are_available(self):
@@ -252,7 +256,7 @@ return server_timeout_message"""
 
                         # If the incoming address and name arent in any list do following
                         if identity_name != user_list_element_name and identity_address != user_list_element_address:
-                                decide_string = decide_string + just_append
+                            decide_string = decide_string + just_append
 
                         # If the identity name is in no list but the address occurs in list do following
                         elif identity_name != user_list_element_name and identity_address == user_list_element_address:
