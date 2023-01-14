@@ -67,7 +67,7 @@ class Server:
         for element in self.list_of_receiver_of_messages:
             ip_addresses = element[1]
             multicast_socket_for_messages.sendto(send_message, (ip_addresses, multicast_port_for_messages))
-            self.list_of_receiver_of_messages = self.list_of_receiver_of_messages.remove(ip_addresses)
+            self.list_of_receiver_of_messages.remove(ip_addresses)
 
 
     # This method is used to receive the message of a client that wants to sent a message to one or more other Clients
