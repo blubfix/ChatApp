@@ -24,6 +24,9 @@ receive_the_message_with_tcp_port = 50156
 system_exit_port_tcp = 51153
 system_exit_port_udp = 51154
 
+# Port for list update communication
+list_update_broadcast_port = 52551
+
 # The own IP address
 host = socket.gethostname()
 my_own_ip_address = socket.gethostbyname(host)
@@ -51,8 +54,12 @@ class Server:
 
     # The method update_list is used to send the updated user list to all others servers in the distributed system
     def update_list(self):
-        update_list_send_socket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+        '''update_list_send_socket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
         update_list_send_socket.setsockopt(SOL_SOCKET, SO_BROADCAST, 1)
+
+        try:
+            update_list_send_socket.sendto(list_update_broadcast_port)'''
+        pass
 
     def receive_list_update(self):
         pass
@@ -73,6 +80,8 @@ class Server:
             addresses_to_send_to = element[1]
             multicast_socket_for_messages.sendto(send_message, (addresses_to_send_to, multicast_port_for_messages))
             print(addresses_to_send_to)
+
+        self.list_of_receiver_of_messages = []
 
     # This method is used to receive the message of a client that wants to sent a message to one or more other Clients
     def tcp_answer_client_about_receivers_are_available(self):
