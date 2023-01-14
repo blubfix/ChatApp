@@ -94,6 +94,7 @@ class Client:
     # This method is used to send the message that should be sent to other users to the server.
     # The server is responsible to send this message to the other users
     def method_to_send_messages(self, address, message):
+        print('Show me')
         send_the_message_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         send_the_message_socket.connect((address, send_the_message_to_tcp_port))
         send_the_message_socket.setblocking(False)
@@ -111,6 +112,7 @@ class Client:
             server_answer_socket.listen()
             timeout_for_serverconnection = 5
             server_answer_socket.settimeout(timeout_for_serverconnection)
+            print('Hier angekommen nach nachricht')
 
             connection, address = server_answer_socket.accept()
             while True:
@@ -125,10 +127,14 @@ class Client:
 
                     # messages to be checked
                     bye = 'Bye'
+                    exist_message = 'The user exist'
 
                     if bye not in server_message:
-                        split_server_answer_for_identity = server_message.split(" ")
-                        self.own_identity = split_server_answer_for_identity[1]
+                        if exist_message in server_message:
+                            print(exist_message)
+                        else:
+                            split_server_answer_for_identity = server_message.split(" ")
+                            self.own_identity = split_server_answer_for_identity[1]
                     elif success_message_for_receiver in server_message:
                         print('yes it does work')
 
