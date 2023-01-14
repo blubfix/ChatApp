@@ -47,16 +47,18 @@ class Server:
     def __init__(self):
         self.user_list = []  # List with tupel of available users including name and address
         self.server_list = []  # List with the other Servers
-        self.leader = True  # Needed to enable leader methods and to make sure only the leader handles Round Robin
+        self.leader = False  # Needed to enable leader methods and to make sure only the leader handles Round Robin
         self.user_address_list = []  # A list with the addresses of users that are available
         self.user_name_list = []  # A list with the user names that are available
         self.list_of_receiver_of_messages = []  # needed to see who receives a message
 
     # The method update_list is used to send the updated user list to all others servers in the distributed system
-    def update_list(self):
+    def update_user_list(self):
+        starttime = time()
         while self.leader==True:
-            sleep(5)
-            if self.user_list:
+            print("tick")
+            
+            if len(self.user_list)!=0:
                 update_list_send_socket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
                 update_list_send_socket.setsockopt(SOL_SOCKET, SO_BROADCAST, 1)
 
@@ -69,7 +71,7 @@ class Server:
 
                 except:
                     print('update List Error')
-
+            sleep(10.0 - ((time() - starttime) % 10.0))
     # This method is used to listen to the user list that is sent by the leader every 10 second
     def receive_list_update(self):
         print('die socket hört jetzt auf den Broadcast')
@@ -185,7 +187,7 @@ return server_timeout_message"""
         self.user_address_list.append(address)
         self.user_name_list.append(name)
         self.user_list.append(identity)
-        self.update_list()
+        #self.update_list()
         print(self.user_list)
         self.answer_client_via_tcp(address, msg)
 
@@ -215,124 +217,126 @@ return server_timeout_message"""
     # Client requests further.
 
     def client_listener(self):
-        # UDP socket for listener
-        client_listener_socket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-        client_listener_socket.bind(('', client_listener_port))
-        print(str(client_listener_socket))
+        if self.leader == True:
+          # UDP socket for listener
+            client_listener_socket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+            client_listener_socket.bind(('', client_listener_port))
+            print(str(client_listener_socket))
 
-        while True:
-            try:
-                # Receives identification messages from clients
-                client_identification_message = client_listener_socket.recvfrom(buffer_size)
+            while True:
+                try:
+                    # Receives identification messages from clients
+                    client_identification_message = client_listener_socket.recvfrom(buffer_size)
 
-                # Process Data from Clients that only the name and the IP-Address is left
-                str_client_identification_message = str(client_identification_message)
-                split_identification_message = str_client_identification_message.split("'")
-                identity_name = split_identification_message[1]
-                identity_address = split_identification_message[3]
-                user_identity = (identity_name, identity_address)
+                    # Process Data from Clients that only the name and the IP-Address is left
+                    str_client_identification_message = str(client_identification_message)
+                    split_identification_message = str_client_identification_message.split("'")
+                    identity_name = split_identification_message[1]
+                    identity_address = split_identification_message[3]
+                    user_identity = (identity_name, identity_address)
 
-                # Different specific error and success messages
-                success_msg_for_client = 'Hello {}, your identification was successful'.format(identity_name)
-                success_msg_changed_name = 'Hello {}, your name was updated'.format(identity_name)
-                error_msg_for_client = 'Excuse me, your name is already used, please tryout another name'
-                error_msg_already_logged_in = 'Excuse me, your already logged in'
-                general_error = 'Excuse me, an Error occurred'
+                    # Different specific error and success messages
+                    success_msg_for_client = 'Hello {}, your identification was successful'.format(identity_name)
+                    success_msg_changed_name = 'Hello {}, your name was updated'.format(identity_name)
+                    error_msg_for_client = 'Excuse me, your name is already used, please tryout another name'
+                    error_msg_already_logged_in = 'Excuse me, your already logged in'
+                    general_error = 'Excuse me, an Error occurred'
 
-                # load the data into a list containing all data of currently possible users and amke sure this list is
-                # reliable, make sure it's not possible to have wrong data in this List
+                    # load the data into a list containing all data of currently possible users and amke sure this list is
+                    # reliable, make sure it's not possible to have wrong data in this List
 
-                # Fehler hier, es ist möglich das ein Name zwei mal vorkommt
-                # If the user address list is empty or just has 1 tupel inside, its not needed to iterate through
-                if len(self.user_list) < 1:
-
-                    # If the incoming address and name arent in any list do following
-                    if identity_address not in self.user_address_list and identity_name not in self.user_name_list:
-                        self.user_completely_unknown(user_identity, identity_address,
-                                                     identity_name, success_msg_for_client)
-
-                    # If the identity name is in no list but the address occurs in list do following
-                    elif identity_name not in self.user_name_list and identity_address in self.user_address_list:
-                        self.only_user_address_is_known(user_identity, identity_address,
-                                                        identity_name, success_msg_changed_name)
-
-                    # If the identity is the same, the user is already logged in do following
-                    elif identity_name in self.user_name_list and identity_address in self.user_address_list:
-                        print(self.user_list)
-                        self.answer_client_via_tcp(identity_address, error_msg_already_logged_in)
-
-                    # If any other failure occurs just send a general error message
-                    else:
-                        print(self.user_list)
-                        self.answer_client_via_tcp(identity_address, general_error)
-
-                # if there is more than one tupel inside user_list, it has to be iterated through, so the code has to be
-                # different, because the in statement just works out for the first tupel and not for a whole list
-                elif len(self.user_list) >= 1:
-                    # The decide string is extended by the user_list with each iteration.
-                    # This creates a string that can be examined for a substring and a message is sent according to
-                    # the substring that appears. This makes it possible to iterate through the entire user_list and
-                    # make sure that no name or address can get into the list more than once.
-                    # Thus the list remains reliable and can be used as an address book for the second client
-                    # functionality.
-                    decide_string = ''
-                    just_append = '1'
-                    remove_and_append = '2'
-                    name_already_used = '3'
-                    dont_append = '4'
-
-                    for user_list_element in self.user_list:
-                        str_user_list_element = str(user_list_element)
-                        splitted_user_list_element = str_user_list_element.split("'")
-                        user_list_element_name = str(splitted_user_list_element[1])
-                        user_list_element_address = str(splitted_user_list_element[3])
+                    # Fehler hier, es ist möglich das ein Name zwei mal vorkommt
+                    # If the user address list is empty or just has 1 tupel inside, its not needed to iterate through
+                    if len(self.user_list) < 1:
 
                         # If the incoming address and name arent in any list do following
-                        if identity_name != user_list_element_name and identity_address != user_list_element_address:
-                            decide_string = decide_string + just_append
+                        if identity_address not in self.user_address_list and identity_name not in self.user_name_list:
+                            self.user_completely_unknown(user_identity, identity_address,
+                                                        identity_name, success_msg_for_client)
 
                         # If the identity name is in no list but the address occurs in list do following
-                        elif identity_name != user_list_element_name and identity_address == user_list_element_address:
-                            decide_string = decide_string + remove_and_append
-                            break
-
-                        # If a name is already used but the address is not known do following
-                        elif identity_name == user_list_element_name and identity_address != user_list_element_address:
-                            decide_string = decide_string + name_already_used
-                            break
+                        elif identity_name not in self.user_name_list and identity_address in self.user_address_list:
+                            self.only_user_address_is_known(user_identity, identity_address,
+                                                            identity_name, success_msg_changed_name)
 
                         # If the identity is the same, the user is already logged in do following
-                        elif identity_name == user_list_element_name and identity_address == user_list_element_address:
-                            decide_string = decide_string + dont_append
-                            break
+                        elif identity_name in self.user_name_list and identity_address in self.user_address_list:
+                            print(self.user_list)
+                            self.answer_client_via_tcp(identity_address, error_msg_already_logged_in)
 
-                    # self.answer_client_via_tcp(identity_address, success_msg_for_client)
-                    if dont_append in decide_string:
-                        print(decide_string)
-                        print(self.user_list)
+                        # If any other failure occurs just send a general error message
+                        else:
+                            print(self.user_list)
+                            self.answer_client_via_tcp(identity_address, general_error)
+
+                    # if there is more than one tupel inside user_list, it has to be iterated through, so the code has to be
+                    # different, because the in statement just works out for the first tupel and not for a whole list
+                    elif len(self.user_list) >= 1:
+                        # The decide string is extended by the user_list with each iteration.
+                        # This creates a string that can be examined for a substring and a message is sent according to
+                        # the substring that appears. This makes it possible to iterate through the entire user_list and
+                        # make sure that no name or address can get into the list more than once.
+                        # Thus the list remains reliable and can be used as an address book for the second client
+                        # functionality.
                         decide_string = ''
-                        self.answer_client_via_tcp(identity_address, error_msg_already_logged_in)
+                        just_append = '1'
+                        remove_and_append = '2'
+                        name_already_used = '3'
+                        dont_append = '4'
 
-                    elif remove_and_append in decide_string:
-                        print(decide_string)
-                        decide_string = ''
-                        self.only_user_address_is_known(user_identity, identity_address, identity_name,
-                                                        success_msg_changed_name)
+                        for user_list_element in self.user_list:
+                            str_user_list_element = str(user_list_element)
+                            splitted_user_list_element = str_user_list_element.split("'")
+                            user_list_element_name = str(splitted_user_list_element[1])
+                            user_list_element_address = str(splitted_user_list_element[3])
 
-                    elif name_already_used in decide_string:
-                        print(decide_string)
-                        decide_string = ''
-                        print(self.user_list)
-                        self.answer_client_via_tcp(identity_address, error_msg_for_client)
+                            # If the incoming address and name arent in any list do following
+                            if identity_name != user_list_element_name and identity_address != user_list_element_address:
+                                decide_string = decide_string + just_append
 
-                    else:
-                        print(decide_string)
-                        decide_string = ''
-                        self.user_completely_unknown(user_identity, identity_address, identity_name,
-                                                     success_msg_for_client)
+                            # If the identity name is in no list but the address occurs in list do following
+                            elif identity_name != user_list_element_name and identity_address == user_list_element_address:
+                                decide_string = decide_string + remove_and_append
+                                break
 
-            finally:
-                pass
+                            # If a name is already used but the address is not known do following
+                            elif identity_name == user_list_element_name and identity_address != user_list_element_address:
+                                decide_string = decide_string + name_already_used
+                                break
+
+                            # If the identity is the same, the user is already logged in do following
+                            elif identity_name == user_list_element_name and identity_address == user_list_element_address:
+                                decide_string = decide_string + dont_append
+                                break
+
+                        # self.answer_client_via_tcp(identity_address, success_msg_for_client)
+                        if dont_append in decide_string:
+                            print(decide_string)
+                            print(self.user_list)
+                            decide_string = ''
+                            self.answer_client_via_tcp(identity_address, error_msg_already_logged_in)
+
+                        elif remove_and_append in decide_string:
+                            print(decide_string)
+                            decide_string = ''
+                            self.only_user_address_is_known(user_identity, identity_address, identity_name,
+                                                            success_msg_changed_name)
+
+                        elif name_already_used in decide_string:
+                            print(decide_string)
+                            decide_string = ''
+                            print(self.user_list)
+                            self.answer_client_via_tcp(identity_address, error_msg_for_client)
+
+                        else:
+                            print(decide_string)
+                            decide_string = ''
+                            self.user_completely_unknown(user_identity, identity_address, identity_name,
+                                                        success_msg_for_client)
+
+                finally:
+                    pass
+                    
 
     # This method is used to receive a initial message by Clients, if they want to chat with other users
     def message_receiver_handler(self):
