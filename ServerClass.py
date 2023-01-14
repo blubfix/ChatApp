@@ -73,6 +73,7 @@ class Server:
 
     # This method is used to listen to the user list that is sent by the leader every 10 second
     def receive_list_update(self):
+        print('die socket hört jetzt auf den Broadcast ')
         while not self.leader:
             list_update_listener_socket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
             list_update_listener_socket.bind(('', list_update_broadcast_port))
@@ -81,7 +82,7 @@ class Server:
                 try:
                     # Receives identification messages from clients
                     user_list_update_ascii = list_update_listener_socket.recvfrom(buffer_size)
-                    user_list_update_string = str(user_list_update_ascii[1])
+                    user_list_update_string = str(user_list_update_ascii)
                     print(user_list_update_string)
 
 
