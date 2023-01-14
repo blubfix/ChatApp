@@ -49,7 +49,8 @@ class Server:
 
     # The method update_list is used to send the updated user list to all others servers in the distributed system
     def update_list(self):
-        pass
+        update_list_send_socket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+        update_list_send_socket.setsockopt(SOL_SOCKET, SO_BROADCAST, 1)
 
     def receive_list_update(self):
         pass
@@ -67,7 +68,7 @@ class Server:
         for element in self.list_of_receiver_of_messages:
             ip_addresses = element[1]
             multicast_socket_for_messages.sendto(send_message, (ip_addresses, multicast_port_for_messages))
-            self.list_of_receiver_of_messages.remove(ip_addresses)
+            print(ip_addresses)
 
 
     # This method is used to receive the message of a client that wants to sent a message to one or more other Clients
