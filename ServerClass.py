@@ -75,8 +75,8 @@ class Server:
         tcp_socket_for_messages.bind((my_own_ip_address, receive_the_message_with_tcp_port))
         tcp_socket_for_messages.listen()
 
-        # set timeout to 5
-        timeout_for_client_answer = 5
+        # set timeout to 10
+        timeout_for_client_answer = 10
         tcp_socket_for_messages.settimeout(timeout_for_client_answer)
 
         new_socket_for_connection, address_of_client = tcp_socket_for_messages.accept()

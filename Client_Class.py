@@ -94,7 +94,6 @@ class Client:
     # This method is used to send the message that should be sent to other users to the server.
     # The server is responsible to send this message to the other users
     def method_to_send_messages(self, address, message):
-        print('Show me')
         send_the_message_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         send_the_message_socket.connect((address, send_the_message_to_tcp_port))
         send_the_message_socket.setblocking(False)
@@ -102,6 +101,7 @@ class Client:
         send_message = message.encode('ascii')
         send_the_message_socket.sendall(send_message)
         send_the_message_socket.close()
+        print('Show me')
 
 
     # Method that is needed for responding to tcp message sent by server to a Client
@@ -211,6 +211,7 @@ class Client:
 
     # This method is used to get multicast messages by other users
     def get_message_by_other_user_multicast(self):
+        print('Listener for message is active')
         multicast_get_message_socket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM, socket.IPPROTO_UDP)
         multicast_get_message_socket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
 
@@ -220,7 +221,10 @@ class Client:
         multicast_get_message_socket.setsockopt(socket.IPPROTO_IP, socket.IP_ADD_MEMBERSHIP, mreq)
 
         while self.stop_event.is_set():
-            print(multicast_get_message_socket.recv(multicast_message_buffer))
+            message = multicast_get_message_socket.recv(multicast_message_buffer)
+            str_message = str(message)
+            print(str_message)
+
 
     # This method is used to end the program and ensure that the identity is removed from user List on server
     def end_the_program(self):
