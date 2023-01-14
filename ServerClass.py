@@ -83,8 +83,13 @@ class Server:
                 try:
                     # Receives identification messages from clients
                     user_list_update_ascii = list_update_listener_socket.recvfrom(buffer_size)
-                    user_list_update_string = str(user_list_update_ascii)
+                    user_list_update_string = str(user_list_update_ascii[0])
                     print(user_list_update_string)
+                    temp_user_list = user_list_update_string.replace("b","")
+                    temp2_user_list = temp_user_list_update_string.replace('"',"")
+                    temp3_user_list = temp_user_list_update_string.replace(")(""),(")
+                    print(temp3_user_list)
+                    
 
                 except:
                     pass
@@ -206,7 +211,6 @@ return server_timeout_message"""
                 self.user_name_list.remove(user_list_element_name)
                 self.user_name_list.append(name)
                 self.user_list.append(identity)
-                self.update_list()
                 print(self.user_list)
                 self.answer_client_via_tcp(address, msg)
                 break
@@ -415,7 +419,6 @@ return server_timeout_message"""
                     self.user_list.remove(user_identity)
                     self.user_name_list.remove(identity_name)
                     self.user_address_list.remove(identity_address)
-                    self.update_list()
                     test_message = 'The user {} is deleted'.format(identity_name)
                     print(test_message)
                     self.answer_client_via_tcp(identity_address, bye_message)
