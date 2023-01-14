@@ -84,7 +84,9 @@ class Server:
 
         for element in self.list_of_receiver_of_messages:
             addresses_to_send_to = element[1]
-            multicast_socket_for_messages.sendto(send_message, (addresses_to_send_to, multicast_port_for_messages))
+            print("Adddress to send to:")
+            print(addresses_to_send_to)
+            print(multicast_socket_for_messages.sendto(send_message, (addresses_to_send_to, multicast_port_for_messages)))
             print(addresses_to_send_to)
             addresses_to_send_to = ''
 
@@ -337,6 +339,12 @@ return server_timeout_message"""
 
                 # split the list of receiver to make the single names comparable with the list of users
                 splitted_list_of_receiver = list_of_receiver.split(',')
+                print(splitted_list_of_receiver)
+                for name in splitted_list_of_receiver:
+                    if name =='':
+                        splitted_list_of_receiver.remove(name)
+                print(splitted_list_of_receiver)
+
                 filtered_list_of_receiver = [x for x in splitted_list_of_receiver if x]
                 print(filtered_list_of_receiver)
                 test_list_for_comparison = []
@@ -344,19 +352,30 @@ return server_timeout_message"""
                 # declare the both messages that are needed for response to the client
                 success_message_for_receiver = 'The users exist' + ',' + str(my_own_ip_address)
                 error_message_for_receiver = 'The users doesnt exist'
-
+                test_list_for_comparison = []
+                self.list_of_receiver_of_messages=[]
                 for element in self.user_list:
+                    print("element")
+                    print(element)
                     for name in splitted_list_of_receiver:
-                        if name in element:
+                        print("name")
+                        print(name)
+                        if name == element[0]:
+                            print("name equals element")
                             test_list_for_comparison.append(name)
                             self.list_of_receiver_of_messages.append(element)
+                            break
                         else:
                             print('Fehler in Zeile 352')
 
                 if test_list_for_comparison == filtered_list_of_receiver:
                     self.answer_client_via_tcp(sender_ip_of_message, success_message_for_receiver)
                     self.tcp_answer_client_about_receivers_are_available()
+                    print("Send message")
+                    
+                    
                 else:
+                    print("ELSE send message")
                     self.answer_client_via_tcp(sender_ip_of_message, error_message_for_receiver)
 
             finally:

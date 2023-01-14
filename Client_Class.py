@@ -224,6 +224,7 @@ class Client:
             #print(self.stop_event.is_set())
             try:
                 if multicast_get_message_socket.recv(multicast_message_buffer):
+                    print("Message incomming")
                     message = multicast_get_message_socket.recv(multicast_message_buffer)
                     str_message = str(message)
                     str_message_splitted = str_message.split("'")
@@ -231,7 +232,7 @@ class Client:
                     print(print_message)
 
             except:
-                pass
+                print("Line 232")
         print("___________________DONE:_")
 
     # This method is used to end the program and ensure that the identity is removed from user List on server
