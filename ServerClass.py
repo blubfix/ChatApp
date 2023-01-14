@@ -54,12 +54,19 @@ class Server:
 
     # The method update_list is used to send the updated user list to all others servers in the distributed system
     def update_list(self):
-        '''update_list_send_socket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+        update_list_send_socket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
         update_list_send_socket.setsockopt(SOL_SOCKET, SO_BROADCAST, 1)
+        send_string_with_user = ''
 
         try:
-            update_list_send_socket.sendto(list_update_broadcast_port)'''
-        pass
+            for element in self.user_list:
+                send_string_with_user = send_string_with_user + "'" + element
+            user_list_in_ascii = send_string_with_user.encode('ascii')
+            update_list_send_socket.sendto(user_list_in_ascii, ('255.255.255.255', list_update_broadcast_port))
+            send_string_with_user = ''
+
+        except:
+            pass
 
     def receive_list_update(self):
         pass
@@ -76,10 +83,10 @@ class Server:
         addresses_to_send_to = ''
 
         for element in self.list_of_receiver_of_messages:
-
             addresses_to_send_to = element[1]
             multicast_socket_for_messages.sendto(send_message, (addresses_to_send_to, multicast_port_for_messages))
             print(addresses_to_send_to)
+            addresses_to_send_to = ''
 
         self.list_of_receiver_of_messages = []
 
@@ -106,8 +113,9 @@ class Server:
                 # was auch immer mit der Nachricht gemacht wird, dannach muss diese entsprechende Funktion aufgerufen werden
                 self.multicast_message_for_receiver(prepared_message)
                 break
-            finally:
-                pass
+            except:
+                print('Fehler Zeile 116')
+
 
     """server_answer_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
     server_answer_socket.bind((my_own_ip_address, server_answer_port_tcp))
@@ -343,7 +351,7 @@ return server_timeout_message"""
                             test_list_for_comparison.append(name)
                             self.list_of_receiver_of_messages.append(element)
                         else:
-                            pass
+                            print('Fehler in Zeile 352')
 
                 if test_list_for_comparison == filtered_list_of_receiver:
                     self.answer_client_via_tcp(sender_ip_of_message, success_message_for_receiver)
