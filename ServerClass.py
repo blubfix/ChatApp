@@ -56,7 +56,6 @@ class Server:
     def update_list(self):
         while self.leader:
             sleep(5)
-            print('lets go')
             if self.user_list:
                 update_list_send_socket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
                 update_list_send_socket.setsockopt(SOL_SOCKET, SO_BROADCAST, 1)
@@ -73,7 +72,7 @@ class Server:
 
     # This method is used to listen to the user list that is sent by the leader every 10 second
     def receive_list_update(self):
-        print('die socket hört jetzt auf den Broadcast ')
+        print('die socket hört jetzt auf den Broadcast')
         while not self.leader:
             list_update_listener_socket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
             list_update_listener_socket.bind(('', list_update_broadcast_port))
@@ -84,7 +83,6 @@ class Server:
                     user_list_update_ascii = list_update_listener_socket.recvfrom(buffer_size)
                     user_list_update_string = str(user_list_update_ascii)
                     print(user_list_update_string)
-
 
                 except:
                     pass
