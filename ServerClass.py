@@ -340,55 +340,56 @@ return server_timeout_message"""
 
     # This method is used to receive a initial message by Clients, if they want to chat with other users
     def message_receiver_handler(self):
-        message_receiver_handler_socket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-        message_receiver_handler_socket.bind(('', receive_message_request_port))
-        print(str(message_receiver_handler_socket))
+        if self.leader == True:
+            message_receiver_handler_socket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+            message_receiver_handler_socket.bind(('', receive_message_request_port))
+            print(str(message_receiver_handler_socket))
 
-        while True:
-            try:
-                message_receiver_message = message_receiver_handler_socket.recvfrom(buffer_size)
+            while True:
+                try:
+                    message_receiver_message = message_receiver_handler_socket.recvfrom(buffer_size)
 
-                # prepare the message to get the user that should receive a message and the address of the origin
-                str_message_receiver_message = str(message_receiver_message)
-                str_message_receiver_message = str_message_receiver_message.split("'")
-                list_of_receiver = str_message_receiver_message[1]
-                sender_ip_of_message = str_message_receiver_message[3]
-                print(sender_ip_of_message)
+                    # prepare the message to get the user that should receive a message and the address of the origin
+                    str_message_receiver_message = str(message_receiver_message)
+                    str_message_receiver_message = str_message_receiver_message.split("'")
+                    list_of_receiver = str_message_receiver_message[1]
+                    sender_ip_of_message = str_message_receiver_message[3]
+                    print(sender_ip_of_message)
 
-                # split the list of receiver to make the single names comparable with the list of users
-                splitted_list_of_receiver = list_of_receiver.split(',')
-                for name in splitted_list_of_receiver:
-                    if name =='':
-                        splitted_list_of_receiver.remove(name)
-
-                filtered_list_of_receiver = [x for x in splitted_list_of_receiver if x]
-                test_list_for_comparison = []
-
-                # declare the both messages that are needed for response to the client
-                success_message_for_receiver = 'The users exist' + ',' + str(my_own_ip_address)
-                error_message_for_receiver = 'The users doesnt exist'
-                test_list_for_comparison = []
-                self.list_of_receiver_of_messages=[]
-                for element in self.user_list:
+                    # split the list of receiver to make the single names comparable with the list of users
+                    splitted_list_of_receiver = list_of_receiver.split(',')
                     for name in splitted_list_of_receiver:
-                        if name == element[0]:
-                            test_list_for_comparison.append(name)
-                            self.list_of_receiver_of_messages.append(element)
-                            break
+                        if name =='':
+                            splitted_list_of_receiver.remove(name)
+
+                    filtered_list_of_receiver = [x for x in splitted_list_of_receiver if x]
+                    test_list_for_comparison = []
+
+                    # declare the both messages that are needed for response to the client
+                    success_message_for_receiver = 'The users exist' + ',' + str(my_own_ip_address)
+                    error_message_for_receiver = 'The users doesnt exist'
+                    test_list_for_comparison = []
+                    self.list_of_receiver_of_messages=[]
+                    for element in self.user_list:
+                        for name in splitted_list_of_receiver:
+                            if name == element[0]:
+                                test_list_for_comparison.append(name)
+                                self.list_of_receiver_of_messages.append(element)
+                                break
+                            
+
+                    if test_list_for_comparison == filtered_list_of_receiver:
+                        self.answer_client_via_tcp(sender_ip_of_message, success_message_for_receiver)
+                        self.tcp_answer_client_about_receivers_are_available()
+                    
                         
-
-                if test_list_for_comparison == filtered_list_of_receiver:
-                    self.answer_client_via_tcp(sender_ip_of_message, success_message_for_receiver)
-                    self.tcp_answer_client_about_receivers_are_available()
-                   
+                        
+                    else:
                     
-                    
-                else:
-                   
-                    self.answer_client_via_tcp(sender_ip_of_message, error_message_for_receiver)
+                        self.answer_client_via_tcp(sender_ip_of_message, error_message_for_receiver)
 
-            finally:
-                pass
+                finally:
+                    pass
 
     # When the Client stops running it has to be removed from the user list
     def client_listener_for_system_exit(self):
