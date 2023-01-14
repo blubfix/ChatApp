@@ -54,22 +54,38 @@ class Server:
 
     # The method update_list is used to send the updated user list to all others servers in the distributed system
     def update_list(self):
-        update_list_send_socket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-        update_list_send_socket.setsockopt(SOL_SOCKET, SO_BROADCAST, 1)
-        send_string_with_user = ''
+        while self.leader:
+            sleep(10)
+            if self.user_list:
+                update_list_send_socket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+                update_list_send_socket.setsockopt(SOL_SOCKET, SO_BROADCAST, 1)
 
-        try:
-            for element in self.user_list:
-                send_string_with_user = send_string_with_user + "'" + element
-            user_list_in_ascii = send_string_with_user.encode('ascii')
-            update_list_send_socket.sendto(user_list_in_ascii, ('255.255.255.255', list_update_broadcast_port))
-            send_string_with_user = ''
+                try:
+                    send_string_with_user = ''.join(str(element) for element in self.user_list)
+                    user_list_in_ascii = send_string_with_user.encode('ascii')
+                    update_list_send_socket.sendto(user_list_in_ascii, ('255.255.255.255', list_update_broadcast_port))
+                    send_string_with_user = ''
+                    print('Ende der Methode Update List')
 
-        except:
-            pass
+                except:
+                    print('update List Error')
 
+    # This method is used to listen to the user list that is sent by the leader every 10 second
     def receive_list_update(self):
-        pass
+        while not self.leader:
+            list_update_listener_socket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+            list_update_listener_socket.bind(('', list_update_broadcast_port))
+
+            while True:
+                try:
+                    # Receives identification messages from clients
+                    user_list_update_ascii = list_update_listener_socket.recvfrom(buffer_size)
+                    user_list_update_string = str(user_list_update_ascii[1])
+                    print(user_list_update_string)
+
+
+                except:
+                    pass
 
     def multicast_message_for_receiver(self, message):
 

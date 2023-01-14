@@ -231,7 +231,7 @@ class Client:
                     print(print_message)
 
             except:
-                print("Error whhile receiving message")
+                print("Error while receiving message")
         
 
     # This method is used to end the program and ensure that the identity is removed from user List on server

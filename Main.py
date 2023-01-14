@@ -17,6 +17,13 @@ if __name__ == '__main__':
     """heartbeat_sender_thread = threading.Thread(target=server.heartbeat)
     heartbeat_sender_thread.start()"""
 
+    # Update List Threads
+    update_list_listener_thread = threading.Thread(target=server.receive_list_update)
+    update_list_listener_thread.start()
+
+    send_user_list_thread = threading.Thread(target=server.update_list)
+    send_user_list_thread.start()
+
     # Starts a thread that is used for the method client listener for system exit
     client_exit_thread = threading.Thread(target=server.client_listener_for_system_exit)
     client_exit_thread.start()
