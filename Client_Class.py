@@ -220,20 +220,19 @@ class Client:
         multicast_get_message_socket.setsockopt(socket.IPPROTO_IP, socket.IP_ADD_MEMBERSHIP, mreq)
 
         while True:
-            #print("thread running")
-            #print(self.stop_event.is_set())
             try:
-                if multicast_get_message_socket.recv(multicast_message_buffer):
-                    print("Message incomming")
-                    message = multicast_get_message_socket.recv(multicast_message_buffer)
+                message = multicast_get_message_socket.recv(multicast_message_buffer)
+                if message !=b'':
                     str_message = str(message)
                     str_message_splitted = str_message.split("'")
                     print_message = str_message_splitted[1]
+                    print('')
+                    print("You received a new message:\n")
                     print(print_message)
 
             except:
-                print("Line 232")
-        print("___________________DONE:_")
+                print("Error whhile receiving message")
+        
 
     # This method is used to end the program and ensure that the identity is removed from user List on server
     def end_the_program(self):
