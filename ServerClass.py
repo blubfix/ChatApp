@@ -76,23 +76,49 @@ class Server:
     def receive_list_update(self):
         print('die socket hört jetzt auf den Broadcast')
         while self.leader!= True:
+            
             list_update_listener_socket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
             list_update_listener_socket.bind(('', list_update_broadcast_port))
 
             while True:
-                try:
+               
                     # Receives identification messages from clients
                     user_list_update_ascii = list_update_listener_socket.recvfrom(buffer_size)
                     user_list_update_string = str(user_list_update_ascii[0])
-                    print(user_list_update_string)
-                    temp_user_list = user_list_update_string.replace("b","")
-                    temp2_user_list = temp_user_list_update_string.replace('"',"")
-                    temp3_user_list = temp_user_list_update_string.replace(")(""),(")
-                    print(temp3_user_list)
+                    #print(user_list_update_string)
+                    temp_user_list = user_list_update_string.replace('b"',"")
+                    #print(temp_user_list)
+                    temp_user_list = temp_user_list.replace(')"',")")
+                    #print(temp2_user_list)
+                    temp_user_list = temp_user_list.replace(")(","!")
+                    temp_user_list = temp_user_list.replace("(","")
+                    temp_user_list = temp_user_list.replace(")","")
+                    
+                    #print(temp_user_list)
+                    if "!" in temp_user_list:
+                        temp4_user_list = temp_user_list.split("!")
+                    for element in temp4_user_list:
+                        user= element.split(", ")[0].replace("'","")
+                        ip= element.split(", ")[1].replace("'","")
+                        #print(user)
+                        #print(ip)
+                        if ip not in self.user_address_list and user not in self.user_name_list:
+                            user_list_tuple = (user, ip)
+                            print("thisthat")
+                            flag = False
+                            self.user_address_list.append(ip)
+                            self.user_name_list.append(user)
+                            self.user_list.append(user_list_tuple)
+                            
+                            #self.update_list()
+                            for element in self.user_list:
+                                print(element)
+                            
+                         
+                        
                     
 
-                except:
-                    pass
+                
 
     def multicast_message_for_receiver(self, message):
 
@@ -188,14 +214,16 @@ return server_timeout_message"""
 
         # This method is used to have a better structured code. It is used when a user is not known for the server
 
-    def user_completely_unknown(self, identity, address, name, msg):
+    def user_completely_unknown(self, identity, address, name, msg,flag):
+        print("unknown user")
         self.user_address_list.append(address)
         self.user_name_list.append(name)
         self.user_list.append(identity)
         #self.update_list()
         print(self.user_list)
-        self.answer_client_via_tcp(address, msg)
-
+        if flag == True:
+            self.answer_client_via_tcp(address, msg)
+        
     # achtung noch nicht fertig!
     def only_user_address_is_known(self, identity, address, name, msg):
         outside_loop_variable = ()
@@ -256,7 +284,7 @@ return server_timeout_message"""
                         # If the incoming address and name arent in any list do following
                         if identity_address not in self.user_address_list and identity_name not in self.user_name_list:
                             self.user_completely_unknown(user_identity, identity_address,
-                                                        identity_name, success_msg_for_client)
+                                                        identity_name, success_msg_for_client,True)
 
                         # If the identity name is in no list but the address occurs in list do following
                         elif identity_name not in self.user_name_list and identity_address in self.user_address_list:
