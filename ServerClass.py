@@ -166,22 +166,24 @@ class Server:
         sleep(10.0 - ((time() - starttime) % 10.0))
 
     def listen_to_server_list_update(self):
-        server_list_update_listener_socket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-        server_list_update_listener_socket.bind(('', server_list_update_broadcast_port))
+        if self.leader != True:
 
-        while True:
-            try:
-                server_ip_ascii = server_list_update_listener_socket.recvfrom(buffer_size)
-                server_ip_string = str(server_ip_ascii)
-                server_ip_split = server_ip_string.split("'")
-                server_ip = server_ip_split[1]
-                print(server_ip)
+            server_list_update_listener_socket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+            server_list_update_listener_socket.bind(('', server_list_update_broadcast_port))
 
-                """if (self.server_list == []):
-                    self.server_list.append(server_ip)"""
+            while True:
+                try:
+                    server_ip_ascii = server_list_update_listener_socket.recvfrom(buffer_size)
+                    server_ip_string = str(server_ip_ascii)
+                    server_ip_split = server_ip_string.split("'")
+                    server_ip = server_ip_split[1]
+                    print(server_ip)
 
-            except:
-                pass
+                    """if (self.server_list == []):
+                        self.server_list.append(server_ip)"""
+
+                except:
+                    pass
 
 
         """if len(self.user_list) < 1:

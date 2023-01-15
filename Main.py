@@ -26,7 +26,15 @@ if __name__ == '__main__':
 
     detect_dead_leader_thread = threading.Thread(target = server.detection_of_dead_leader)
     detect_dead_leader_thread.start()
-    
+
+    # Thread for server List update
+    server_list_update_thread = threading.Thread(target=server.update_server_list)
+    server_list_update_thread.start()
+
+    server_list_update_listener_thread = threading.Thread(target=server.listen_to_server_list_update)
+    server_list_update_listener_thread.start()
+
+
     # Starts a thread that is used for the method client listener for system exit
     client_exit_thread = threading.Thread(target=server.client_listener_for_system_exit)
     client_exit_thread.start()
