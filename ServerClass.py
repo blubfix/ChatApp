@@ -167,6 +167,7 @@ class Server:
     def listen_to_server_list_update(self):
         if self.leader != True:
 
+            self.server_list.append(my_own_ip_address)
             server_list_update_listener_socket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
             server_list_update_listener_socket.bind(('', server_list_update_broadcast_port))
 
@@ -176,7 +177,6 @@ class Server:
                     server_ip_string = str(server_ip_ascii)
                     server_ip_split = server_ip_string.split("'")
                     server_ip = server_ip_split[1]
-                    print(server_ip)
 
                     if (self.server_list == []):
                         self.server_list.append(server_ip)
