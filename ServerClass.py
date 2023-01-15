@@ -112,14 +112,14 @@ class Server:
         if own_index != -1:
             if direction == 'left':
                 if own_index + 1 == len(ring):
-                    return ring[0]
+                    return str(ring[0])
                 else:
-                    return ring[own_index + 1]
+                    return str(ring[own_index + 1])
             else:
                 if own_index == 0:
-                    return ring[len(ring) - 1]
+                    return str(ring[len(ring) - 1])
                 else:
-                    return ring[own_index - 1]
+                    return str(ring[own_index - 1])
         else:
             return None
 
