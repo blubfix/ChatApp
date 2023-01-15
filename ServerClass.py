@@ -129,7 +129,7 @@ class Server:
     # The method update_list is used to send the updated user list to all others servers in the distributed system
     def update_user_list(self):
         starttime = time()
-        while self.leader == True:
+        while self.leader:
 
             if len(self.user_list) != 0:
                 update_list_send_socket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
@@ -140,10 +140,22 @@ class Server:
                     user_list_in_ascii = send_string_with_user.encode('ascii')
                     update_list_send_socket.sendto(user_list_in_ascii, ('255.255.255.255', list_update_broadcast_port))
                     send_string_with_user = ''
-                    print('Ende der Methode Update List')
+                    print('Liste mit Inhalt versendet')
 
                 except:
                     print('update List Error')
+
+            else:
+                update_list_send_socket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+                update_list_send_socket.setsockopt(SOL_SOCKET, SO_BROADCAST, 1)
+                try:
+                    send_string_with_user = '1'
+                    user_list_in_ascii = send_string_with_user.encode('ascii')
+                    update_list_send_socket.sendto(user_list_in_ascii, ('255.255.255.255', list_update_broadcast_port))
+                    send_string_with_user = ''
+                    print('Leere Liste versendet')
+                except:
+                    pass
             sleep(5.0 - ((time() - starttime) % 5.0))
 
     # This method is used to listen to the user list that is sent by the leader every 10 second
@@ -160,29 +172,48 @@ class Server:
                 user_list_update_ascii = list_update_listener_socket.recvfrom(buffer_size)
 
                 user_list_update_string = str(user_list_update_ascii[0])
-                if (len(user_list_update_ascii) != 0):
+
+                if user_list_update_string == '1':
+                    self.lastMessageTime = time()
+                    print(1)
+                elif len(user_list_update_ascii) != 0 and user_list_update_string != '1':
+
                     self.lastMessageTime = time()
 
-                # print(user_list_update_string)
-                temp_user_list = user_list_update_string.replace('b"', "")
-                # print(temp_user_list)
-                temp_user_list = temp_user_list.replace(')"', ")")
-                # print(temp2_user_list)
-                temp_user_list = temp_user_list.replace(")(", "!")
-                temp_user_list = temp_user_list.replace("(", "")
-                temp_user_list = temp_user_list.replace(")", "")
+                    # print(user_list_update_string)
+                    temp_user_list = user_list_update_string.replace('b"', "")
+                    # print(temp_user_list)
+                    temp_user_list = temp_user_list.replace(')"', ")")
+                    # print(temp2_user_list)
+                    temp_user_list = temp_user_list.replace(")(", "!")
+                    temp_user_list = temp_user_list.replace("(", "")
+                    temp_user_list = temp_user_list.replace(")", "")
 
-                # print(temp_user_list)
-                if "!" in temp_user_list:
-                    temp4_user_list = temp_user_list.split("!")
-                    for element in temp4_user_list:
-                        user = element.split(", ")[0].replace("'", "")
-                        ip = element.split(", ")[1].replace("'", "")
-                        # print(user)
-                        # print(ip)
+                    # print(temp_user_list)
+                    if "!" in temp_user_list:
+                        temp4_user_list = temp_user_list.split("!")
+                        for element in temp4_user_list:
+                            user = element.split(", ")[0].replace("'", "")
+                            ip = element.split(", ")[1].replace("'", "")
+                            # print(user)
+                            # print(ip)
+                            if ip not in self.user_address_list and user not in self.user_name_list:
+                                user_list_tuple = (user, ip)
+                                print("thisthat")
+                                flag = False
+                                self.user_address_list.append(ip)
+                                self.user_name_list.append(user)
+                                self.user_list.append(user_list_tuple)
+
+                                # self.update_list()
+                                for element in self.user_list:
+                                    print(element)
+
+                    else:
+                        user = temp_user_list.split(", ")[0].replace("'", "")
+                        ip = temp_user_list.split(", ")[1].replace("'", "")
                         if ip not in self.user_address_list and user not in self.user_name_list:
                             user_list_tuple = (user, ip)
-                            print("thisthat")
                             flag = False
                             self.user_address_list.append(ip)
                             self.user_name_list.append(user)
@@ -191,20 +222,6 @@ class Server:
                             # self.update_list()
                             for element in self.user_list:
                                 print(element)
-
-                else:
-                    user = temp_user_list.split(", ")[0].replace("'", "")
-                    ip = temp_user_list.split(", ")[1].replace("'", "")
-                    if ip not in self.user_address_list and user not in self.user_name_list:
-                        user_list_tuple = (user, ip)
-                        flag = False
-                        self.user_address_list.append(ip)
-                        self.user_name_list.append(user)
-                        self.user_list.append(user_list_tuple)
-
-                        # self.update_list()
-                        for element in self.user_list:
-                            print(element)
 
     def update_server_list(self):
         starttime = time()
