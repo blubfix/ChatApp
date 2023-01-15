@@ -47,7 +47,7 @@ class Server:
     def __init__(self):
         self.user_list = []  # List with tupel of available users including name and address
         self.server_list = []  # List with the other Servers
-        self.leader = False  # Needed to enable leader methods and to make sure only the leader handles Round Robin
+        self.leader = True  # Needed to enable leader methods and to make sure only the leader handles Round Robin
         self.user_address_list = []  # A list with the addresses of users that are available
         self.user_name_list = []  # A list with the user names that are available
         self.list_of_receiver_of_messages = []  # needed to see who receives a message
@@ -56,7 +56,6 @@ class Server:
     def update_user_list(self):
         starttime = time()
         while self.leader==True:
-            print("tick")
             
             if len(self.user_list)!=0:
                 update_list_send_socket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
@@ -81,7 +80,6 @@ class Server:
             list_update_listener_socket.bind(('', list_update_broadcast_port))
 
             while True:
-               
                     # Receives identification messages from clients
                     user_list_update_ascii = list_update_listener_socket.recvfrom(buffer_size)
                     user_list_update_string = str(user_list_update_ascii[0])
@@ -97,24 +95,25 @@ class Server:
                     #print(temp_user_list)
                     if "!" in temp_user_list:
                         temp4_user_list = temp_user_list.split("!")
-                    for element in temp4_user_list:
-                        user= element.split(", ")[0].replace("'","")
-                        ip= element.split(", ")[1].replace("'","")
-                        #print(user)
-                        #print(ip)
-                        if ip not in self.user_address_list and user not in self.user_name_list:
-                            user_list_tuple = (user, ip)
-                            print("thisthat")
-                            flag = False
-                            self.user_address_list.append(ip)
-                            self.user_name_list.append(user)
-                            self.user_list.append(user_list_tuple)
+                        for element in temp4_user_list:
+                            user= element.split(", ")[0].replace("'","")
+                            ip= element.split(", ")[1].replace("'","")
+                            #print(user)
+                            #print(ip)
+                            if ip not in self.user_address_list and user not in self.user_name_list:
+                                user_list_tuple = (user, ip)
+                                print("thisthat")
+                                flag = False
+                                self.user_address_list.append(ip)
+                                self.user_name_list.append(user)
+                                self.user_list.append(user_list_tuple)
+                                
+                                #self.update_list()
+                                for element in self.user_list:
+                                    print(element)
                             
-                            #self.update_list()
-                            for element in self.user_list:
-                                print(element)
-                            
-                         
+                    else:
+                        print(temp_user_list)
                         
                     
 
