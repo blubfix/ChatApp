@@ -68,19 +68,23 @@ class Server:
 
     def detection_of_dead_leader(self):
         while True:
+            #print("leader" + str(self.leader) +" LCR ACTIVE: " + str(self.lcrActiveFlag))
+            
             if self.leader != True:
-                self.actualTime = time()
-                # print(self.actualTime)
-                leader_death_time = 15
+                if self.lcrActiveFlag != True:
+                    self.actualTime = time()
+                    
+                    leader_death_time = 15
 
-                if ((self.actualTime - self.lastMessageTime) >= leader_death_time):
-                    ring = self.form_a_ring_with_server_addresses()
-                    my_ip = my_own_ip_address
-                    self.my_neighbour = self.get_the_left_neighbour(ring, my_ip)
+                    if ((self.actualTime - self.lastMessageTime) >= leader_death_time):
+                        print("WASTED")
+                        ring = self.form_a_ring_with_server_addresses()
+                        my_ip = my_own_ip_address
+                        self.my_neighbour = self.get_the_left_neighbour(ring, my_ip)
 
-                    self.send_message_to_neighbour(self.my_neighbour, ring)
+                        self.send_message_to_neighbour(self.my_neighbour, ring)
 
-                    self.start_lcr()
+                        self.start_lcr()
 
     def neighbour_message_listener(self):
         multicast_neighbour_listener_socket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM, socket.IPPROTO_UDP)
@@ -149,12 +153,15 @@ class Server:
             return None
 
     def start_lcr(self):
+        self.server_list=[]
+        sleep(3)
         lcr_begin_socket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
         x = self.election_message
         #print(json.dumps(x))
         lcr_begin_socket.sendto((json.dumps(self.election_message).encode()), (self.my_neighbour,lcr_port))
-        #print('lcr was started')
+        print('lcr was started')
         self.lcrActiveFlag=True
+        print(self.lcrActiveFlag)
         pass
 
     def lcr_listener_and_execution(self):
@@ -163,9 +170,11 @@ class Server:
         participant = False
         leader_uid = ''
         while True: 
+
             if self.leader != True:
-                #print("MY HOOOOD")
                 if(self.lcrActiveFlag == True):
+                    print("lcr active")
+                    
                     data, address = lcr_listener_socket.recvfrom(buffer_size)
                     message_with_election = json.loads(data.decode())
                     #print(message_with_election)
@@ -175,6 +184,8 @@ class Server:
                         leader_ip = message_with_election['mid']
                         participant = False
                         lcr_listener_socket.sendto((json.dumps(message_with_election).encode()), (self.my_neighbour,lcr_port))
+                        self.lcrActiveFlag = False
+
                     
 
                     if message_with_election['mid']<my_own_ip_address and not participant:
@@ -189,7 +200,7 @@ class Server:
                         #print(self.my_neighbour)
                         participant = True
                         lcr_listener_socket.sendto((json.dumps(message_with_election).encode()), (self.my_neighbour,lcr_port))
-
+                        self.lcrActiveFlag=False
                     elif message_with_election['mid']==my_own_ip_address:
                         print("mid^3")
                         #print(self.my_neighbour)
@@ -320,16 +331,21 @@ class Server:
             send_own_ip_string = str(my_own_ip_address)
             send_own_ip_ascii = send_own_ip_string.encode('ascii')
             update_server_list_socket.sendto(send_own_ip_ascii, ('255.255.255.255', server_list_update_broadcast_port))
-            print("hllo")
+
             send_own_ip_string = ''
 
             sleep(2.0 - ((time() - starttime) % 2.0))
 
     def listen_to_server_list_update(self):
+        startTime = time()
         while True:
+            if((time()-startTime)>=10):
+                startTime=time()
+                self.server_list=[]
+                self.server_list.append(my_own_ip_address)
             if self.leader != True:
 
-                self.server_list.append(my_own_ip_address)
+                
                 server_list_update_listener_socket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
                 server_list_update_listener_socket.bind(('', server_list_update_broadcast_port))
 
