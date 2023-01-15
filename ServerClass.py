@@ -79,7 +79,7 @@ class Server:
 
                 self.send_message_to_neighbour(self.my_neighbour, ring)
 
-                self.start_lcr()
+                self.start_lcr()f
 
     def neighbour_message_listener(self):
         multicast_neighbour_listener_socket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM, socket.IPPROTO_UDP)
@@ -94,8 +94,8 @@ class Server:
             try:
                 message = multicast_neighbour_listener_socket.recv(multicast_message_buffer)
                 str_message = str(message)
-                print("Listener ____")
-                print(message)
+                #print("Listener ____")
+                #print(message)
                 neighbour_list = str_message.replace('b', "")
                 # print(neighbour_list)
                 neighbour_list = neighbour_list.replace('"', "")
@@ -105,7 +105,7 @@ class Server:
                 # print(temp2_user_list)
                 neighbour_list = neighbour_list.replace("[", "")
 
-                print(neighbour_list)
+                #print(neighbour_list)
 
             except:
                 pass
@@ -150,9 +150,9 @@ class Server:
     def start_lcr(self):
         lcr_begin_socket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
         x = self.election_message
-        print(json.dumps(x))
+        #print(json.dumps(x))
         lcr_begin_socket.sendto((json.dumps(self.election_message).encode()), (self.my_neighbour,lcr_port))
-        print('lcr was started')
+        #print('lcr was started')
         pass
 
     def lcr_listener_and_execution(self):
@@ -166,17 +166,23 @@ class Server:
             print(self.my_neighbour)
             data, address = lcr_listener_socket.recvfrom(buffer_size)
             message_with_election = json.loads(data.decode())
+            print(message_with_election)
             if message_with_election['isLeader']:
+                print("isLeader^1")
                 leader_ip = message_with_election['mid']
                 participant = False
                 lcr_listener_socket.sendto((json.dumps(message_with_election).encode()), (self.my_neighbour,lcr_port))
 
             if message_with_election['mid']<my_own_ip_address and not participant:
+                print("mid^1")
+
                 new_election_message = self.election_message
                 participant = True
                 lcr_listener_socket.sendto((json.dumps(new_election_message).encode()), (self.my_neighbour,lcr_port))
 
             elif message_with_election['mid']>my_own_ip_address:
+                print("mid^2")
+                print(self.my_neighbour)
                 participant = True
                 lcr_listener_socket.sendto((json.dumps(message_with_election).encode()), (self.my_neighbour,lcr_port))
 
@@ -186,8 +192,9 @@ class Server:
                 participant = False
                 lcr_listener_socket.sendto((json.dumps(new_election_message).encode()), (self.my_neighbour,lcr_port))
                 self.leader=True
+                print("leader true")
                 break
-
+            
 
 
     # The method update_list is used to send the updated user list to all others servers in the distributed system
