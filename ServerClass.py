@@ -99,7 +99,7 @@ class Server:
                 neighbour_list = neighbour_list.replace("[", "")
                
                 print(neighbour_list)
-                break
+                
             except:
                 pass
 
@@ -292,7 +292,8 @@ class Server:
                                 break
 
                         if dont_append in decide_string:
-                            print('list is up to date')
+                            #print('list is up to date')
+                            pass
 
                         else:
                             self.server_list.append(server_ip)
