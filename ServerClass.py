@@ -282,8 +282,9 @@ return server_timeout_message"""
 
                         # If the incoming address and name arent in any list do following
                         if identity_address not in self.user_address_list and identity_name not in self.user_name_list:
+                            flag = True
                             self.user_completely_unknown(user_identity, identity_address,
-                                                        identity_name, success_msg_for_client,True)
+                                                        identity_name, success_msg_for_client,flag)
 
                         # If the identity name is in no list but the address occurs in list do following
                         elif identity_name not in self.user_name_list and identity_address in self.user_address_list:
@@ -362,8 +363,9 @@ return server_timeout_message"""
                         else:
                             print(decide_string)
                             decide_string = ''
+                            flag = True
                             self.user_completely_unknown(user_identity, identity_address, identity_name,
-                                                        success_msg_for_client)
+                                                        success_msg_for_client, flag)
 
                 finally:
                     pass
