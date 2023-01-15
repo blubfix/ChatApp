@@ -172,8 +172,9 @@ class Server:
                 user_list_update_ascii = list_update_listener_socket.recvfrom(buffer_size)
 
                 user_list_update_string = str(user_list_update_ascii[0])
+                meaningless_message = user_list_update_string.replace('b', '')
 
-                if user_list_update_string == '1':
+                if meaningless_message == '1':
                     self.lastMessageTime = time()
                     print(1)
                 elif len(user_list_update_ascii) != 0 and user_list_update_string != '1':
