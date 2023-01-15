@@ -173,7 +173,7 @@ class Server:
 
                 user_list_update_string = str(user_list_update_ascii[0])
                 meaningless_message = user_list_update_string.replace('b', '')
-
+                meaningless_message = meaningless_message.replace('"',"")
                 if meaningless_message == '1':
                     self.lastMessageTime = time()
                     print(1)
