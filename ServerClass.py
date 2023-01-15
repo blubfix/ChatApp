@@ -197,8 +197,9 @@ class Server:
                     participant = False
                     lcr_listener_socket.sendto((json.dumps(new_election_message).encode()), (self.my_neighbour,lcr_port))
                     self.leader=True
+                    self.lcrActiveFlag = False
                     print("leader true")
-                    break
+                    
                 else:
                     print("its smth else")
 
