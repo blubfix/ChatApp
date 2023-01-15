@@ -26,6 +26,7 @@ system_exit_port_udp = 51154
 
 # Port for list update communication
 list_update_broadcast_port = 52551
+server_list_update_broadcast_port = 52552
 
 # The own IP address
 host = socket.gethostname()
@@ -145,11 +146,133 @@ class Server:
                             for element in self.user_list:
                                 print(element)
                                 
-                    
-                        
-                    
+    # This method is used to ensure that every server has an actual server list to make it possible to form a ring
 
-                
+    def update_server_list(self):
+        starttime = time()
+
+        if len(self.server_list) != 0:
+            update_server_list_socket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+            update_server_list_socket.setsockopt(SOL_SOCKET, SO_BROADCAST, 1)
+
+            try:
+                send_own_ip_string = str(my_own_ip_address)
+                send_own_ip_ascii = send_own_ip_string.encode('ascii')
+                update_server_list_socket.sendto(send_own_ip_ascii, ('255.255.255.255', server_list_update_broadcast_port))
+                send_own_ip_string = ''
+
+            except:
+                pass
+        sleep(10.0 - ((time() - starttime) % 10.0))
+
+    def listen_to_server_list_update(self):
+        server_list_update_listener_socket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+        server_list_update_listener_socket.bind(('', server_list_update_broadcast_port))
+
+        while True:
+            try:
+                server_ip_ascii = server_list_update_listener_socket.recvfrom(buffer_size)
+                server_ip_string = str(server_ip_ascii)
+                server_ip_split = server_ip_string.split("'")
+                server_ip = server_ip_split[1]
+                print(server_ip)
+
+                """if (self.server_list == []):
+                    self.server_list.append(server_ip)"""
+
+            except:
+                pass
+
+
+        """if len(self.user_list) < 1:
+
+            # If the incoming address and name arent in any list do following
+            if identity_address not in self.user_address_list and identity_name not in self.user_name_list:
+                flag = True
+                self.user_completely_unknown(user_identity, identity_address,
+                                             identity_name, success_msg_for_client, flag)
+
+            # If the identity name is in no list but the address occurs in list do following
+            elif identity_name not in self.user_name_list and identity_address in self.user_address_list:
+                self.only_user_address_is_known(user_identity, identity_address,
+                                                identity_name, success_msg_changed_name)
+
+            # If the identity is the same, the user is already logged in do following
+            elif identity_name in self.user_name_list and identity_address in self.user_address_list:
+                print(self.user_list)
+                self.answer_client_via_tcp(identity_address, error_msg_already_logged_in)
+
+            # If any other failure occurs just send a general error message
+            else:
+                print(self.user_list)
+                self.answer_client_via_tcp(identity_address, general_error)
+
+        # if there is more than one tupel inside user_list, it has to be iterated through, so the code has to be
+        # different, because the in statement just works out for the first tupel and not for a whole list
+        elif len(self.user_list) >= 1:
+            # The decide string is extended by the user_list with each iteration.
+            # This creates a string that can be examined for a substring and a message is sent according to
+            # the substring that appears. This makes it possible to iterate through the entire user_list and
+            # make sure that no name or address can get into the list more than once.
+            # Thus the list remains reliable and can be used as an address book for the second client
+            # functionality.
+            decide_string = ''
+            just_append = '1'
+            remove_and_append = '2'
+            name_already_used = '3'
+            dont_append = '4'
+
+            for user_list_element in self.user_list:
+                str_user_list_element = str(user_list_element)
+                splitted_user_list_element = str_user_list_element.split("'")
+                user_list_element_name = str(splitted_user_list_element[1])
+                user_list_element_address = str(splitted_user_list_element[3])
+
+                # If the incoming address and name arent in any list do following
+                if identity_name != user_list_element_name and identity_address != user_list_element_address:
+                    decide_string = decide_string + just_append
+
+                # If the identity name is in no list but the address occurs in list do following
+                elif identity_name != user_list_element_name and identity_address == user_list_element_address:
+                    decide_string = decide_string + remove_and_append
+                    break
+
+                # If a name is already used but the address is not known do following
+                elif identity_name == user_list_element_name and identity_address != user_list_element_address:
+                    decide_string = decide_string + name_already_used
+                    break
+
+                # If the identity is the same, the user is already logged in do following
+                elif identity_name == user_list_element_name and identity_address == user_list_element_address:
+                    decide_string = decide_string + dont_append
+                    break
+
+            # self.answer_client_via_tcp(identity_address, success_msg_for_client)
+            if dont_append in decide_string:
+                print(decide_string)
+                print(self.user_list)
+                decide_string = ''
+                self.answer_client_via_tcp(identity_address, error_msg_already_logged_in)
+
+            elif remove_and_append in decide_string:
+                print(decide_string)
+                decide_string = ''
+                self.only_user_address_is_known(user_identity, identity_address, identity_name,
+                                                success_msg_changed_name)
+
+            elif name_already_used in decide_string:
+                print(decide_string)
+                decide_string = ''
+                print(self.user_list)
+                self.answer_client_via_tcp(identity_address, error_msg_for_client)
+
+            else:
+                print(decide_string)
+                decide_string = ''
+                flag = True
+                self.user_completely_unknown(user_identity, identity_address, identity_name,
+                                             success_msg_for_client, flag)"""
+
 
     def multicast_message_for_receiver(self, message):
 
@@ -196,40 +319,6 @@ class Server:
             except:
                 print('Error Line 116')
 
-
-    """server_answer_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-    server_answer_socket.bind((my_own_ip_address, server_answer_port_tcp))
-    server_answer_socket.listen()
-    timeout_for_serverconnection = 5
-    server_answer_socket.settimeout(timeout_for_serverconnection)
-
-    connection, address = server_answer_socket.accept()
-    while True:
-        try:
-            # get data from Server
-            data = connection.recv(buffer_size)
-            str_server_answer_for_request = str(data)
-
-            # split message for output on consol
-            split_server_answer_for_request = str_server_answer_for_request.split("'")
-            server_message = split_server_answer_for_request[1]
-
-            # split message for identity
-            bye = 'Bye'
-            if bye not in server_message:
-                split_server_answer_for_identity = server_message.split(" ")
-                self.own_identity = split_server_answer_for_identity[1]
-
-            output = str(server_message)
-            server_answer_socket.close()
-            return output
-        finally:
-            # Close connection to server
-            server_answer_socket.close()
-
-except socket.timeout:
-
-return server_timeout_message"""
 
     # Method is used for message response via tcp to a client action
     def answer_client_via_tcp(self, address, message):
