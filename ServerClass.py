@@ -79,7 +79,7 @@ class Server:
 
                 self.send_message_to_neighbour(self.my_neighbour, ring)
 
-                self.start_lcr()f
+                self.start_lcr()
 
     def neighbour_message_listener(self):
         multicast_neighbour_listener_socket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM, socket.IPPROTO_UDP)
@@ -166,12 +166,13 @@ class Server:
             print(self.my_neighbour)
             data, address = lcr_listener_socket.recvfrom(buffer_size)
             message_with_election = json.loads(data.decode())
-            print(message_with_election)
+            #print(message_with_election)
             if message_with_election['isLeader']:
                 print("isLeader^1")
                 leader_ip = message_with_election['mid']
                 participant = False
                 lcr_listener_socket.sendto((json.dumps(message_with_election).encode()), (self.my_neighbour,lcr_port))
+             
 
             if message_with_election['mid']<my_own_ip_address and not participant:
                 print("mid^1")
@@ -181,8 +182,8 @@ class Server:
                 lcr_listener_socket.sendto((json.dumps(new_election_message).encode()), (self.my_neighbour,lcr_port))
 
             elif message_with_election['mid']>my_own_ip_address:
-                print("mid^2")
-                print(self.my_neighbour)
+                #print("mid^2")
+                #print(self.my_neighbour)
                 participant = True
                 lcr_listener_socket.sendto((json.dumps(message_with_election).encode()), (self.my_neighbour,lcr_port))
 
