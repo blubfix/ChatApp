@@ -151,18 +151,17 @@ class Server:
         starttime = time()
 
         while True:
-            if len(self.server_list) != 0:
-                update_server_list_socket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-                update_server_list_socket.setsockopt(SOL_SOCKET, SO_BROADCAST, 1)
+            update_server_list_socket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+            update_server_list_socket.setsockopt(SOL_SOCKET, SO_BROADCAST, 1)
 
-                try:
-                    send_own_ip_string = str(my_own_ip_address)
-                    send_own_ip_ascii = send_own_ip_string.encode('ascii')
-                    update_server_list_socket.sendto(send_own_ip_ascii, ('255.255.255.255', server_list_update_broadcast_port))
-                    send_own_ip_string = ''
+            try:
+                send_own_ip_string = str(my_own_ip_address)
+                send_own_ip_ascii = send_own_ip_string.encode('ascii')
+                update_server_list_socket.sendto(send_own_ip_ascii, ('255.255.255.255', server_list_update_broadcast_port))
+                send_own_ip_string = ''
 
-                except:
-                    pass
+            except:
+                pass
             sleep(10.0 - ((time() - starttime) % 10.0))
 
     def listen_to_server_list_update(self):
