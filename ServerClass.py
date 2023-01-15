@@ -64,6 +64,7 @@ class Server:
         self.actualTime = 0
         self.my_neighbour = ''
         self.election_message = {"mid": my_own_ip_address, "isLeader": False}
+     
 
     def detection_of_dead_leader(self):
         while self.leader != True:
@@ -148,7 +149,9 @@ class Server:
 
     def start_lcr(self):
         lcr_begin_socket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-        lcr_begin_socket.sendto(json.dumps(self.election_message), self.my_neighbour)
+        x = self.election_message
+        print(json.dumps(x))
+        lcr_begin_socket.sendto((json.dumps(self.election_message).encode()), (self.my_neighbour,lcr_port))
         print('lcr was started')
         pass
 
@@ -164,22 +167,22 @@ class Server:
             if message_with_election['isLeader']:
                 leader_ip = message_with_election['mid']
                 participant = False
-                lcr_listener_socket.sendto(json.dumps(message_with_election), self.my_neighbour)
+                lcr_listener_socket.sendto((json.dumps(message_with_election).encode()), (self.my_neighbour,lcr_port))
 
             if message_with_election['mid']<my_own_ip_address and not participant:
                 new_election_message = self.election_message
                 participant = True
-                lcr_listener_socket.sendto(json.dumps(new_election_message), self.my_neighbour)
+                lcr_listener_socket.sendto((json.dumps(new_election_message).encode()), (self.my_neighbour,lcr_port))
 
             elif message_with_election['mid']>my_own_ip_address:
                 participant = True
-                lcr_listener_socket.sendto(json.dumps(message_with_election), self.my_neighbour)
+                lcr_listener_socket.sendto((json.dumps(message_with_election).encode()), (self.my_neighbour,lcr_port))
 
             elif message_with_election['mid']==my_own_ip_address:
                 leader_uid = my_own_ip_address
                 new_election_message = {"mid": my_own_ip_address, "isLeader": True}
                 participant = False
-                lcr_listener_socket.sendto(json.dumps(new_election_message), self.my_neighbour)
+                lcr_listener_socket.sendto((json.dumps(new_election_message).encode()), (self.my_neighbour,lcr_port))
 
 
 

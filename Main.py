@@ -25,7 +25,7 @@ if __name__ == '__main__':
     send_user_list_thread.start()
 
     detect_dead_leader_thread = threading.Thread(target = server.detection_of_dead_leader)
-    #detect_dead_leader_thread.start()
+    detect_dead_leader_thread.start()
 
     # Thread for server List update
     server_list_update_thread = threading.Thread(target=server.update_server_list)
