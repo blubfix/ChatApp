@@ -4,6 +4,7 @@ from socket import *
 import socket
 import sys
 from time import time, ctime, sleep
+import struct
 
 # Ports and other needed variables
 # buf size oriented on whatsapp as it is as big as 1 kb
@@ -35,9 +36,12 @@ my_own_ip_address = socket.gethostbyname(host)
 # multicast group ip. This port is used because it is in range of 224.0.1.0 - 238.255.255.255 and should be used for
 # multicast IPs that are used over the internet
 multicast_group_ip = '224.1.2.1'
+multicast_neighbour_group_ip = '224.1.3.1'
 
 # Multicast Port
 multicast_port_for_messages = 52153
+multicast_port_for_neighbours = 52154
+multicast_message_buffer = 10240
 
 
 # The Server class contains the functionalities of the server
@@ -52,25 +56,82 @@ class Server:
         self.user_address_list = []  # A list with the addresses of users that are available
         self.user_name_list = []  # A list with the user names that are available
         self.list_of_receiver_of_messages = []  # needed to see who receives a message
-        self.lastMessageTime=time()
-        self.actualTime =0
-        
+        self.lastMessageTime = time()
+        self.actualTime = 0
+        self.my_neighbour = ''
+
     def detection_of_dead_leader(self):
         while self.leader != True:
             self.actualTime = time()
-            #print(self.actualTime)
+            # print(self.actualTime)
             leader_death_time = 15
-           
-            if ((self.actualTime - self.lastMessageTime)>= leader_death_time):
-                print("you are dead")
-                
+
+            if ((self.actualTime - self.lastMessageTime) >= leader_death_time):
+                ring = str(self.form_a_ring_with_server_addresses())
+                my_ip = my_own_ip_address
+                self.my_neighbour = self.get_the_left_neighbour(ring, my_ip)
+                self.send_message_to_neighbour(self.my_neighbour, ring)
+
+    def neighbour_message_listener(self):
+        multicast_neighbour_listener_socket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM, socket.IPPROTO_UDP)
+        multicast_neighbour_listener_socket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+
+        multicast_neighbour_listener_socket.bind(('', multicast_port_for_neighbours))
+        mreq = struct.pack('4sl', socket.inet_aton(multicast_neighbour_group_ip), socket.INADDR_ANY)
+
+        multicast_neighbour_listener_socket.setsockopt(socket.IPPROTO_IP, socket.IP_ADD_MEMBERSHIP, mreq)
+
+        while True:
+            try:
+                message = multicast_neighbour_listener_socket.recv(multicast_message_buffer)
+                str_message = str(message)
+                print(str_message)
+            except:
+                pass
+
+    def send_message_to_neighbour(self, ip, message):
+        ttl = 2
+
+        multicast_socket_for_neighbours = socket.socket(socket.AF_INET, socket.SOCK_DGRAM, socket.IPPROTO_UDP)
+        multicast_socket_for_neighbours.setsockopt(socket.IPPROTO_IP, socket.IP_MULTICAST_TTL, ttl)
+        send_message = message.encode('ascii')
+
+        multicast_socket_for_neighbours.sendto(send_message, (ip, multicast_port_for_neighbours))
+        addresses_to_send_to = ''
+
+    def form_a_ring_with_server_addresses(self):
+        binary_ring_from_server_list = sorted([socket.inet_aton(element) for element in self.server_list])
+        print(binary_ring_from_server_list)
+
+        ip_ring = [socket.inet_ntoa(ip) for ip in binary_ring_from_server_list]
+        print(ip_ring)
+        return ip_ring
+
+    def get_the_left_neighbour(self, ring, own_ip, direction='left'):
+        own_index = ring.index(own_ip) if own_ip in ring else -1
+        if own_index != -1:
+            if direction == 'left':
+                if own_index + 1 == len(ring):
+                    return ring[0]
+                else:
+                    return ring[own_index + 1]
+            else:
+                if own_index == 0:
+                    return ring[len(ring) - 1]
+                else:
+                    return ring[own_index - 1]
+        else:
+            return None
+
+    def proceed_lcr(self):
+        pass
 
     # The method update_list is used to send the updated user list to all others servers in the distributed system
     def update_user_list(self):
         starttime = time()
-        while self.leader==True:
-            
-            if len(self.user_list)!=0:
+        while self.leader == True:
+
+            if len(self.user_list) != 0:
                 update_list_send_socket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
                 update_list_send_socket.setsockopt(SOL_SOCKET, SO_BROADCAST, 1)
 
@@ -83,42 +144,42 @@ class Server:
 
                 except:
                     print('update List Error')
-            sleep(10.0 - ((time() - starttime) % 10.0))
+            sleep(5.0 - ((time() - starttime) % 5.0))
+
     # This method is used to listen to the user list that is sent by the leader every 10 second
     def receive_list_update(self):
         print('die socket hört jetzt auf den Broadcast')
-        if self.leader!= True:
-            
+        if self.leader != True:
 
             list_update_listener_socket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
             list_update_listener_socket.bind(('', list_update_broadcast_port))
 
             while True:
-                
+
                 # Receives identification messages from clients
                 user_list_update_ascii = list_update_listener_socket.recvfrom(buffer_size)
-          
+
                 user_list_update_string = str(user_list_update_ascii[0])
-                if(len(user_list_update_ascii)!=0):
+                if (len(user_list_update_ascii) != 0):
                     self.lastMessageTime = time()
-                    
-                #print(user_list_update_string)
-                temp_user_list = user_list_update_string.replace('b"',"")
-                #print(temp_user_list)
-                temp_user_list = temp_user_list.replace(')"',")")
-                #print(temp2_user_list)
-                temp_user_list = temp_user_list.replace(")(","!")
-                temp_user_list = temp_user_list.replace("(","")
-                temp_user_list = temp_user_list.replace(")","")
-                
-                #print(temp_user_list)
+
+                # print(user_list_update_string)
+                temp_user_list = user_list_update_string.replace('b"', "")
+                # print(temp_user_list)
+                temp_user_list = temp_user_list.replace(')"', ")")
+                # print(temp2_user_list)
+                temp_user_list = temp_user_list.replace(")(", "!")
+                temp_user_list = temp_user_list.replace("(", "")
+                temp_user_list = temp_user_list.replace(")", "")
+
+                # print(temp_user_list)
                 if "!" in temp_user_list:
                     temp4_user_list = temp_user_list.split("!")
                     for element in temp4_user_list:
-                        user= element.split(", ")[0].replace("'","")
-                        ip= element.split(", ")[1].replace("'","")
-                        #print(user)
-                        #print(ip)
+                        user = element.split(", ")[0].replace("'", "")
+                        ip = element.split(", ")[1].replace("'", "")
+                        # print(user)
+                        # print(ip)
                         if ip not in self.user_address_list and user not in self.user_name_list:
                             user_list_tuple = (user, ip)
                             print("thisthat")
@@ -126,26 +187,24 @@ class Server:
                             self.user_address_list.append(ip)
                             self.user_name_list.append(user)
                             self.user_list.append(user_list_tuple)
-                            
-                            #self.update_list()
+
+                            # self.update_list()
                             for element in self.user_list:
                                 print(element)
-                        
+
                 else:
-                    user= temp_user_list.split(", ")[0].replace("'","")
-                    ip= temp_user_list.split(", ")[1].replace("'","")
+                    user = temp_user_list.split(", ")[0].replace("'", "")
+                    ip = temp_user_list.split(", ")[1].replace("'", "")
                     if ip not in self.user_address_list and user not in self.user_name_list:
-                            user_list_tuple = (user, ip)
-                            flag = False
-                            self.user_address_list.append(ip)
-                            self.user_name_list.append(user)
-                            self.user_list.append(user_list_tuple)
-                            
-                            #self.update_list()
-                            for element in self.user_list:
-                                print(element)
-                                
-    # This method is used to ensure that every server has an actual server list to make it possible to form a ring
+                        user_list_tuple = (user, ip)
+                        flag = False
+                        self.user_address_list.append(ip)
+                        self.user_name_list.append(user)
+                        self.user_list.append(user_list_tuple)
+
+                        # self.update_list()
+                        for element in self.user_list:
+                            print(element)
 
     def update_server_list(self):
         starttime = time()
@@ -157,12 +216,13 @@ class Server:
             try:
                 send_own_ip_string = str(my_own_ip_address)
                 send_own_ip_ascii = send_own_ip_string.encode('ascii')
-                update_server_list_socket.sendto(send_own_ip_ascii, ('255.255.255.255', server_list_update_broadcast_port))
+                update_server_list_socket.sendto(send_own_ip_ascii,
+                                                 ('255.255.255.255', server_list_update_broadcast_port))
                 send_own_ip_string = ''
 
             except:
                 pass
-            sleep(10.0 - ((time() - starttime) % 10.0))
+            sleep(2.0 - ((time() - starttime) % 2.0))
 
     def listen_to_server_list_update(self):
         if self.leader != True:
@@ -202,11 +262,8 @@ class Server:
                             self.server_list.append(server_ip)
                             print(self.server_list)
 
-
-
                 except:
                     pass
-
 
     def multicast_message_for_receiver(self, message):
 
@@ -221,7 +278,7 @@ class Server:
 
         for element in self.list_of_receiver_of_messages:
             addresses_to_send_to = element[1]
-           
+
             multicast_socket_for_messages.sendto(send_message, (addresses_to_send_to, multicast_port_for_messages))
             addresses_to_send_to = ''
 
@@ -253,7 +310,6 @@ class Server:
             except:
                 print('Error Line 116')
 
-
     # Method is used for message response via tcp to a client action
     def answer_client_via_tcp(self, address, message):
         # build up the TCP socket
@@ -268,16 +324,16 @@ class Server:
 
         # This method is used to have a better structured code. It is used when a user is not known for the server
 
-    def user_completely_unknown(self, identity, address, name, msg,flag):
+    def user_completely_unknown(self, identity, address, name, msg, flag):
         print("unknown user")
         self.user_address_list.append(address)
         self.user_name_list.append(name)
         self.user_list.append(identity)
-        #self.update_list()
+        # self.update_list()
         print(self.user_list)
         if flag == True:
             self.answer_client_via_tcp(address, msg)
-        
+
     # achtung noch nicht fertig!
     def only_user_address_is_known(self, identity, address, name, msg):
         outside_loop_variable = ()
@@ -304,7 +360,7 @@ class Server:
 
     def client_listener(self):
         if self.leader == True:
-          # UDP socket for listener
+            # UDP socket for listener
             client_listener_socket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
             client_listener_socket.bind(('', client_listener_port))
             print(str(client_listener_socket))
@@ -339,7 +395,7 @@ class Server:
                         if identity_address not in self.user_address_list and identity_name not in self.user_name_list:
                             flag = True
                             self.user_completely_unknown(user_identity, identity_address,
-                                                        identity_name, success_msg_for_client,flag)
+                                                         identity_name, success_msg_for_client, flag)
 
                         # If the identity name is in no list but the address occurs in list do following
                         elif identity_name not in self.user_name_list and identity_address in self.user_address_list:
@@ -420,11 +476,10 @@ class Server:
                             decide_string = ''
                             flag = True
                             self.user_completely_unknown(user_identity, identity_address, identity_name,
-                                                        success_msg_for_client, flag)
+                                                         success_msg_for_client, flag)
 
                 finally:
                     pass
-                    
 
     # This method is used to receive a initial message by Clients, if they want to chat with other users
     def message_receiver_handler(self):
@@ -447,7 +502,7 @@ class Server:
                     # split the list of receiver to make the single names comparable with the list of users
                     splitted_list_of_receiver = list_of_receiver.split(',')
                     for name in splitted_list_of_receiver:
-                        if name =='':
+                        if name == '':
                             splitted_list_of_receiver.remove(name)
 
                     filtered_list_of_receiver = [x for x in splitted_list_of_receiver if x]
@@ -457,23 +512,22 @@ class Server:
                     success_message_for_receiver = 'The users exist' + ',' + str(my_own_ip_address)
                     error_message_for_receiver = 'The users doesnt exist'
                     test_list_for_comparison = []
-                    self.list_of_receiver_of_messages=[]
+                    self.list_of_receiver_of_messages = []
                     for element in self.user_list:
                         for name in splitted_list_of_receiver:
                             if name == element[0]:
                                 test_list_for_comparison.append(name)
                                 self.list_of_receiver_of_messages.append(element)
                                 break
-                            
 
                     if test_list_for_comparison == filtered_list_of_receiver:
                         self.answer_client_via_tcp(sender_ip_of_message, success_message_for_receiver)
                         self.tcp_answer_client_about_receivers_are_available()
-                    
-                        
-                        
+
+
+
                     else:
-                    
+
                         self.answer_client_via_tcp(sender_ip_of_message, error_message_for_receiver)
 
                 finally:
