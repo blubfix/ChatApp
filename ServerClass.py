@@ -64,7 +64,7 @@ class Server:
         self.actualTime = 0
         self.my_neighbour = ''
         self.election_message = {"mid": my_own_ip_address, "isLeader": False}
-     
+        self.lcrActiveFlag=False
 
     def detection_of_dead_leader(self):
         while self.leader != True:
@@ -153,6 +153,7 @@ class Server:
         #print(json.dumps(x))
         lcr_begin_socket.sendto((json.dumps(self.election_message).encode()), (self.my_neighbour,lcr_port))
         #print('lcr was started')
+        self.lcrActiveFlag=True
         pass
 
     def lcr_listener_and_execution(self):
@@ -162,40 +163,44 @@ class Server:
         leader_uid = ''
 
         while self.leader != True:
-            print("MY HOOOOD")
-            print(self.my_neighbour)
-            data, address = lcr_listener_socket.recvfrom(buffer_size)
-            message_with_election = json.loads(data.decode())
-            #print(message_with_election)
-            if message_with_election['isLeader']:
-                print("isLeader^1")
-                leader_ip = message_with_election['mid']
-                participant = False
-                lcr_listener_socket.sendto((json.dumps(message_with_election).encode()), (self.my_neighbour,lcr_port))
-             
+            #print("MY HOOOOD")
+            if(self.lcrActiveFlag == True):
+                data, address = lcr_listener_socket.recvfrom(buffer_size)
+                message_with_election = json.loads(data.decode())
+                #print(message_with_election)
+                if message_with_election['isLeader']:
+                    print("isLeader^1")
+                    #print(self.my_neighbour)
+                    leader_ip = message_with_election['mid']
+                    participant = False
+                    lcr_listener_socket.sendto((json.dumps(message_with_election).encode()), (self.my_neighbour,lcr_port))
+                
 
-            if message_with_election['mid']<my_own_ip_address and not participant:
-                print("mid^1")
+                if message_with_election['mid']<my_own_ip_address and not participant:
+                    print("mid^1")
+                    #print(self.my_neighbour)
+                    new_election_message = self.election_message
+                    participant = True
+                    lcr_listener_socket.sendto((json.dumps(new_election_message).encode()), (self.my_neighbour,lcr_port))
 
-                new_election_message = self.election_message
-                participant = True
-                lcr_listener_socket.sendto((json.dumps(new_election_message).encode()), (self.my_neighbour,lcr_port))
+                elif message_with_election['mid']>my_own_ip_address:
+                    print("mid^2")
+                    #print(self.my_neighbour)
+                    participant = True
+                    lcr_listener_socket.sendto((json.dumps(message_with_election).encode()), (self.my_neighbour,lcr_port))
 
-            elif message_with_election['mid']>my_own_ip_address:
-                #print("mid^2")
-                #print(self.my_neighbour)
-                participant = True
-                lcr_listener_socket.sendto((json.dumps(message_with_election).encode()), (self.my_neighbour,lcr_port))
-
-            elif message_with_election['mid']==my_own_ip_address:
-                leader_uid = my_own_ip_address
-                new_election_message = {"mid": my_own_ip_address, "isLeader": True}
-                participant = False
-                lcr_listener_socket.sendto((json.dumps(new_election_message).encode()), (self.my_neighbour,lcr_port))
-                self.leader=True
-                print("leader true")
-                break
-            
+                elif message_with_election['mid']==my_own_ip_address:
+                    print("mid^3")
+                    #print(self.my_neighbour)
+                    leader_uid = my_own_ip_address
+                    new_election_message = {"mid": my_own_ip_address, "isLeader": True}
+                    participant = False
+                    lcr_listener_socket.sendto((json.dumps(new_election_message).encode()), (self.my_neighbour,lcr_port))
+                    self.leader=True
+                    print("leader true")
+                    break
+                else:
+                    print("its smth else")
 
 
     # The method update_list is used to send the updated user list to all others servers in the distributed system
