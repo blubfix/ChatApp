@@ -47,10 +47,22 @@ class Server:
     def __init__(self):
         self.user_list = []  # List with tupel of available users including name and address
         self.server_list = []  # List with the other Servers
-        self.leader = True  # Needed to enable leader methods and to make sure only the leader handles Round Robin
+        self.leader = False  # Needed to enable leader methods and to make sure only the leader handles Round Robin
         self.user_address_list = []  # A list with the addresses of users that are available
         self.user_name_list = []  # A list with the user names that are available
         self.list_of_receiver_of_messages = []  # needed to see who receives a message
+        self.lastMessageTime=time()
+        self.actualTime =0
+        
+    def detection_of_dead_leader(self):
+        while self.leader != True:
+            self.actualTime = time()
+            #print(self.actualTime)
+            leader_death_time = 15
+           
+            if ((self.actualTime - self.lastMessageTime)>= leader_death_time):
+                print("you are dead")
+                
 
     # The method update_list is used to send the updated user list to all others servers in the distributed system
     def update_user_list(self):
@@ -74,46 +86,66 @@ class Server:
     # This method is used to listen to the user list that is sent by the leader every 10 second
     def receive_list_update(self):
         print('die socket hört jetzt auf den Broadcast')
-        while self.leader!= True:
+        if self.leader!= True:
             
+
             list_update_listener_socket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
             list_update_listener_socket.bind(('', list_update_broadcast_port))
 
             while True:
-                    # Receives identification messages from clients
-                    user_list_update_ascii = list_update_listener_socket.recvfrom(buffer_size)
-                    user_list_update_string = str(user_list_update_ascii[0])
-                    #print(user_list_update_string)
-                    temp_user_list = user_list_update_string.replace('b"',"")
-                    #print(temp_user_list)
-                    temp_user_list = temp_user_list.replace(')"',")")
-                    #print(temp2_user_list)
-                    temp_user_list = temp_user_list.replace(")(","!")
-                    temp_user_list = temp_user_list.replace("(","")
-                    temp_user_list = temp_user_list.replace(")","")
+                
+                # Receives identification messages from clients
+                user_list_update_ascii = list_update_listener_socket.recvfrom(buffer_size)
+          
+                user_list_update_string = str(user_list_update_ascii[0])
+                if(len(user_list_update_ascii)!=0):
+                    self.lastMessageTime = time()
                     
-                    #print(temp_user_list)
-                    if "!" in temp_user_list:
-                        temp4_user_list = temp_user_list.split("!")
-                        for element in temp4_user_list:
-                            user= element.split(", ")[0].replace("'","")
-                            ip= element.split(", ")[1].replace("'","")
-                            #print(user)
-                            #print(ip)
-                            if ip not in self.user_address_list and user not in self.user_name_list:
-                                user_list_tuple = (user, ip)
-                                print("thisthat")
-                                flag = False
-                                self.user_address_list.append(ip)
-                                self.user_name_list.append(user)
-                                self.user_list.append(user_list_tuple)
-                                
-                                #self.update_list()
-                                for element in self.user_list:
-                                    print(element)
+                #print(user_list_update_string)
+                temp_user_list = user_list_update_string.replace('b"',"")
+                #print(temp_user_list)
+                temp_user_list = temp_user_list.replace(')"',")")
+                #print(temp2_user_list)
+                temp_user_list = temp_user_list.replace(")(","!")
+                temp_user_list = temp_user_list.replace("(","")
+                temp_user_list = temp_user_list.replace(")","")
+                
+                #print(temp_user_list)
+                if "!" in temp_user_list:
+                    temp4_user_list = temp_user_list.split("!")
+                    for element in temp4_user_list:
+                        user= element.split(", ")[0].replace("'","")
+                        ip= element.split(", ")[1].replace("'","")
+                        #print(user)
+                        #print(ip)
+                        if ip not in self.user_address_list and user not in self.user_name_list:
+                            user_list_tuple = (user, ip)
+                            print("thisthat")
+                            flag = False
+                            self.user_address_list.append(ip)
+                            self.user_name_list.append(user)
+                            self.user_list.append(user_list_tuple)
                             
-                    else:
-                        print(temp_user_list)
+                            #self.update_list()
+                            for element in self.user_list:
+                                print(element)
+                        
+                else:
+                    user= temp_user_list.split(", ")[0].replace("'","")
+                    ip= temp_user_list.split(", ")[1].replace("'","")
+                    if ip not in self.user_address_list and user not in self.user_name_list:
+                            user_list_tuple = (user, ip)
+                            print("thisthat")
+                            flag = False
+                            self.user_address_list.append(ip)
+                            self.user_name_list.append(user)
+                            self.user_list.append(user_list_tuple)
+                            
+                            #self.update_list()
+                            for element in self.user_list:
+                                print(element)
+                                
+                    
                         
                     
 

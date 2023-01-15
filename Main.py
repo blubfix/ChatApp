@@ -24,6 +24,9 @@ if __name__ == '__main__':
     send_user_list_thread = threading.Thread(target=server.update_user_list)
     send_user_list_thread.start()
 
+    detect_dead_leader_thread = threading.Thread(target = server.detection_of_dead_leader)
+    detect_dead_leader_thread.start()
+    
     # Starts a thread that is used for the method client listener for system exit
     client_exit_thread = threading.Thread(target=server.client_listener_for_system_exit)
     client_exit_thread.start()
