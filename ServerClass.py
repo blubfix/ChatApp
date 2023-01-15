@@ -249,15 +249,14 @@ class Server:
             update_server_list_socket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
             update_server_list_socket.setsockopt(SOL_SOCKET, SO_BROADCAST, 1)
 
-            try:
-                send_own_ip_string = str(my_own_ip_address)
-                send_own_ip_ascii = send_own_ip_string.encode('ascii')
-                update_server_list_socket.sendto(send_own_ip_ascii,
-                                                 ('255.255.255.255', server_list_update_broadcast_port))
-                send_own_ip_string = ''
+            
+            send_own_ip_string = str(my_own_ip_address)
+            send_own_ip_ascii = send_own_ip_string.encode('ascii')
+            update_server_list_socket.sendto(send_own_ip_ascii,('255.255.255.255', server_list_update_broadcast_port))
+            print("hllo")
+            send_own_ip_string = ''
 
-            except:
-                pass
+        
             sleep(2.0 - ((time() - starttime) % 2.0))
 
     def listen_to_server_list_update(self):
@@ -271,8 +270,11 @@ class Server:
                 try:
                     server_ip_ascii = server_list_update_listener_socket.recvfrom(buffer_size)
                     server_ip_string = str(server_ip_ascii)
+                    #print(server_ip_string)
                     server_ip_split = server_ip_string.split("'")
+                    #print(server_ip_split)
                     server_ip = server_ip_split[1]
+                    #print(server_ip)
 
                     if (self.server_list == []):
                         self.server_list.append(server_ip)
@@ -280,8 +282,8 @@ class Server:
 
                     else:
                         decide_string = ''
-                        just_append = ''
-                        dont_append = ''
+                        just_append = '1'
+                        dont_append = '2'
 
                         for server_list_element in self.server_list:
                             str_server_list_element = str(server_list_element)
@@ -292,7 +294,9 @@ class Server:
                                 break
 
                         if dont_append in decide_string:
-                            #print('list is up to date')
+                            print('list is up to date')
+                            print(self.server_list)
+
                             pass
 
                         else:
