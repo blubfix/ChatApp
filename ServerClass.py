@@ -162,6 +162,8 @@ class Server:
         leader_uid = ''
 
         while self.leader != True:
+            print("MY HOOOOD")
+            print(self.my_neighbour)
             data, address = lcr_listener_socket.recvfrom(buffer_size)
             message_with_election = json.loads(data.decode())
             if message_with_election['isLeader']:
@@ -183,7 +185,8 @@ class Server:
                 new_election_message = {"mid": my_own_ip_address, "isLeader": True}
                 participant = False
                 lcr_listener_socket.sendto((json.dumps(new_election_message).encode()), (self.my_neighbour,lcr_port))
-
+                self.leader=True
+                break
 
 
 
