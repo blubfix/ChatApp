@@ -67,9 +67,10 @@ class Server:
             leader_death_time = 15
 
             if ((self.actualTime - self.lastMessageTime) >= leader_death_time):
-                ring = str(self.form_a_ring_with_server_addresses())
+                ring = self.form_a_ring_with_server_addresses()
                 my_ip = my_own_ip_address
                 self.my_neighbour = self.get_the_left_neighbour(ring, my_ip)
+               
                 self.send_message_to_neighbour(self.my_neighbour, ring)
 
     def neighbour_message_listener(self):
@@ -85,7 +86,20 @@ class Server:
             try:
                 message = multicast_neighbour_listener_socket.recv(multicast_message_buffer)
                 str_message = str(message)
-                print(str_message)
+                print("Listener ____")
+                print(message)
+                neighbour_list = str_message.replace('b', "")
+                # print(neighbour_list)
+                neighbour_list = neighbour_list.replace('"', "")
+                neighbour_list = neighbour_list.replace("'", "")
+
+
+                neighbour_list = neighbour_list.replace(']', "")
+                # print(temp2_user_list)
+                neighbour_list = neighbour_list.replace("[", "")
+               
+                print(neighbour_list)
+                break
             except:
                 pass
 
@@ -94,32 +108,35 @@ class Server:
 
         multicast_socket_for_neighbours = socket.socket(socket.AF_INET, socket.SOCK_DGRAM, socket.IPPROTO_UDP)
         multicast_socket_for_neighbours.setsockopt(socket.IPPROTO_IP, socket.IP_MULTICAST_TTL, ttl)
-        send_message = message.encode('ascii')
-
+        stringMessage = str(message)
+        send_message = stringMessage.encode('ascii')
+       
         multicast_socket_for_neighbours.sendto(send_message, (ip, multicast_port_for_neighbours))
         addresses_to_send_to = ''
 
     def form_a_ring_with_server_addresses(self):
         binary_ring_from_server_list = sorted([socket.inet_aton(element) for element in self.server_list])
-        print(binary_ring_from_server_list)
+        #print(binary_ring_from_server_list)
 
         ip_ring = [socket.inet_ntoa(ip) for ip in binary_ring_from_server_list]
-        print(ip_ring)
+        #print(ip_ring)
         return ip_ring
 
     def get_the_left_neighbour(self, ring, own_ip, direction='left'):
+        #print(ring[0])
         own_index = ring.index(own_ip) if own_ip in ring else -1
         if own_index != -1:
             if direction == 'left':
                 if own_index + 1 == len(ring):
-                    return str(ring[0])
+                    
+                    return ring[0]
                 else:
-                    return str(ring[own_index + 1])
+                    return ring[own_index + 1]
             else:
                 if own_index == 0:
-                    return str(ring[len(ring) - 1])
+                    return ring[len(ring) - 1]
                 else:
-                    return str(ring[own_index - 1])
+                    return ring[own_index - 1]
         else:
             return None
 
