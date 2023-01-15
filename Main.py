@@ -38,6 +38,10 @@ if __name__ == '__main__':
     neighbour_listener_thread = threading.Thread(target=server.neighbour_message_listener)
     neighbour_listener_thread.start()
 
+    # lcr threads
+    lcr_listener_and_execution_thread = threading.Thread(target=server.lcr_listener_and_execution)
+    lcr_listener_and_execution_thread.start()
+
 
     # Starts a thread that is used for the method client listener for system exit
     client_exit_thread = threading.Thread(target=server.client_listener_for_system_exit)

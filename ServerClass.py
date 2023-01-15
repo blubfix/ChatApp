@@ -1,5 +1,6 @@
 # This Python file contains the class Server and a few variables that are needed
 # Imports needed for Server
+import json
 from socket import *
 import socket
 import sys
@@ -24,6 +25,9 @@ receive_the_message_with_tcp_port = 50156
 # Port for system exist communication
 system_exit_port_tcp = 51153
 system_exit_port_udp = 51154
+
+# Port for lcr
+lcr_port = 56150
 
 # Port for list update communication
 list_update_broadcast_port = 52551
@@ -59,6 +63,7 @@ class Server:
         self.lastMessageTime = time()
         self.actualTime = 0
         self.my_neighbour = ''
+        self.election_message = {"mid": my_own_ip_address, "isLeader": False}
 
     def detection_of_dead_leader(self):
         while self.leader != True:
@@ -70,8 +75,10 @@ class Server:
                 ring = self.form_a_ring_with_server_addresses()
                 my_ip = my_own_ip_address
                 self.my_neighbour = self.get_the_left_neighbour(ring, my_ip)
-               
+
                 self.send_message_to_neighbour(self.my_neighbour, ring)
+
+                self.start_lcr()
 
     def neighbour_message_listener(self):
         multicast_neighbour_listener_socket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM, socket.IPPROTO_UDP)
@@ -93,13 +100,12 @@ class Server:
                 neighbour_list = neighbour_list.replace('"', "")
                 neighbour_list = neighbour_list.replace("'", "")
 
-
                 neighbour_list = neighbour_list.replace(']', "")
                 # print(temp2_user_list)
                 neighbour_list = neighbour_list.replace("[", "")
-               
+
                 print(neighbour_list)
-                
+
             except:
                 pass
 
@@ -110,25 +116,25 @@ class Server:
         multicast_socket_for_neighbours.setsockopt(socket.IPPROTO_IP, socket.IP_MULTICAST_TTL, ttl)
         stringMessage = str(message)
         send_message = stringMessage.encode('ascii')
-       
+
         multicast_socket_for_neighbours.sendto(send_message, (ip, multicast_port_for_neighbours))
         addresses_to_send_to = ''
 
     def form_a_ring_with_server_addresses(self):
         binary_ring_from_server_list = sorted([socket.inet_aton(element) for element in self.server_list])
-        #print(binary_ring_from_server_list)
+        # print(binary_ring_from_server_list)
 
         ip_ring = [socket.inet_ntoa(ip) for ip in binary_ring_from_server_list]
-        #print(ip_ring)
+        # print(ip_ring)
         return ip_ring
 
     def get_the_left_neighbour(self, ring, own_ip, direction='left'):
-        #print(ring[0])
+        # print(ring[0])
         own_index = ring.index(own_ip) if own_ip in ring else -1
         if own_index != -1:
             if direction == 'left':
                 if own_index + 1 == len(ring):
-                    
+
                     return ring[0]
                 else:
                     return ring[own_index + 1]
@@ -140,8 +146,43 @@ class Server:
         else:
             return None
 
-    def proceed_lcr(self):
+    def start_lcr(self):
+        lcr_begin_socket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+        lcr_begin_socket.sendto(json.dumps(self.election_message), self.my_neighbour)
+        print('lcr was started')
         pass
+
+    def lcr_listener_and_execution(self):
+        lcr_listener_socket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+        lcr_listener_socket.bind((my_own_ip_address, lcr_port))
+        participant = False
+        leader_uid = ''
+
+        while self.leader != True:
+            data, address = lcr_listener_socket.recvfrom(buffer_size)
+            message_with_election = json.loads(data.decode())
+            if message_with_election['isLeader']:
+                leader_ip = message_with_election['mid']
+                participant = False
+                lcr_listener_socket.sendto(json.dumps(message_with_election), self.my_neighbour)
+
+            if message_with_election['mid']<my_own_ip_address and not participant:
+                new_election_message = self.election_message
+                participant = True
+                lcr_listener_socket.sendto(json.dumps(new_election_message), self.my_neighbour)
+
+            elif message_with_election['mid']>my_own_ip_address:
+                participant = True
+                lcr_listener_socket.sendto(json.dumps(message_with_election), self.my_neighbour)
+
+            elif message_with_election['mid']==my_own_ip_address:
+                leader_uid = my_own_ip_address
+                new_election_message = {"mid": my_own_ip_address, "isLeader": True}
+                participant = False
+                lcr_listener_socket.sendto(json.dumps(new_election_message), self.my_neighbour)
+
+
+
 
     # The method update_list is used to send the updated user list to all others servers in the distributed system
     def update_user_list(self):
@@ -190,7 +231,7 @@ class Server:
 
                 user_list_update_string = str(user_list_update_ascii[0])
                 meaningless_message = user_list_update_string.replace('b', '')
-                meaningless_message = meaningless_message.replace("'","")
+                meaningless_message = meaningless_message.replace("'", "")
                 print(meaningless_message)
                 if meaningless_message == "1":
                     self.lastMessageTime = time()
@@ -249,14 +290,12 @@ class Server:
             update_server_list_socket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
             update_server_list_socket.setsockopt(SOL_SOCKET, SO_BROADCAST, 1)
 
-            
             send_own_ip_string = str(my_own_ip_address)
             send_own_ip_ascii = send_own_ip_string.encode('ascii')
-            update_server_list_socket.sendto(send_own_ip_ascii,('255.255.255.255', server_list_update_broadcast_port))
+            update_server_list_socket.sendto(send_own_ip_ascii, ('255.255.255.255', server_list_update_broadcast_port))
             print("hllo")
             send_own_ip_string = ''
 
-        
             sleep(2.0 - ((time() - starttime) % 2.0))
 
     def listen_to_server_list_update(self):
@@ -270,11 +309,11 @@ class Server:
                 try:
                     server_ip_ascii = server_list_update_listener_socket.recvfrom(buffer_size)
                     server_ip_string = str(server_ip_ascii)
-                    #print(server_ip_string)
+                    # print(server_ip_string)
                     server_ip_split = server_ip_string.split("'")
-                    #print(server_ip_split)
+                    # print(server_ip_split)
                     server_ip = server_ip_split[1]
-                    #print(server_ip)
+                    # print(server_ip)
 
                     if (self.server_list == []):
                         self.server_list.append(server_ip)
