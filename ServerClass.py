@@ -79,8 +79,9 @@ class Server:
                     if ((self.actualTime - self.lastMessageTime) >= leader_death_time):
                         print("WASTED")
                         self.server_list=[]
+                        self.server_list.append(my_own_ip_address)
                         self.my_neighbour=[]
-                        sleep(3)
+                        sleep(2)
                         ring = self.form_a_ring_with_server_addresses()
                         my_ip = my_own_ip_address
                         self.my_neighbour = self.get_the_left_neighbour(ring, my_ip)
