@@ -37,10 +37,12 @@ my_own_ip_address = socket.gethostbyname(host)
 # multicast group ip. This port is used because it is in range of 224.0.1.0 - 238.255.255.255 and should be used for
 # multicast IPs that are used over the internet
 multicast_group_ip = '224.1.2.1'
+multicast_group_ip_leader_info = '224.1.4.1'
 
 # Multicast Port
 multicast_port_for_messages = 52153
 multicast_message_buffer = 10240
+multicast_port_for_leader_info = 52155
 
 # general server timeout is 5 seconds
 general_timeout = 5
@@ -106,67 +108,89 @@ class Client:
 
     # Method that is needed for responding to tcp message sent by server to a Client
     def handle_server_answers(self):
-        try:
-            server_answer_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-            server_answer_socket.bind((my_own_ip_address, server_answer_port_tcp))
-            server_answer_socket.listen()
-            timeout_for_serverconnection = 5
-            server_answer_socket.settimeout(timeout_for_serverconnection)
+        print("handle server answer")
+        server_answer_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
 
-            connection, address = server_answer_socket.accept()
-            while True:
-                try:
-                    # get data from Server
-                    data = connection.recv(buffer_size)
-                    str_server_answer_for_request = str(data)
+        server_answer_socket.bind((my_own_ip_address, server_answer_port_tcp))
+        server_answer_socket.listen()
+        timeout_for_serverconnection = 5
+        server_answer_socket.settimeout(timeout_for_serverconnection)
 
-                    # split message for output on consol
-                    split_server_answer_for_request = str_server_answer_for_request.split("'")
-                    server_message = split_server_answer_for_request[1]
+        connection, address = server_answer_socket.accept()
+        
+        # get data from Server
+        data = connection.recv(buffer_size)
+        str_server_answer_for_request = str(data)
 
-                    # messages to be checked
-                    bye = 'Bye'
-                    exist_message = 'The user exist'
+        # split message for output on consol
+        split_server_answer_for_request = str_server_answer_for_request.split("'")
+        server_message = split_server_answer_for_request[1]
 
-                    if bye not in server_message:
-                        if exist_message in server_message:
-                            print(exist_message)
-                        else:
-                            split_server_answer_for_identity = server_message.split(" ")
-                            self.own_identity = split_server_answer_for_identity[1]
-                    elif success_message_for_receiver in server_message:
-                        print('yes it does work')
+        # messages to be checked
+        bye = 'Bye'
+        exist_message = 'The user exist'
 
-                    output = str(server_message)
-                    server_answer_socket.close()
-                    return output
-                finally:
-                    # Close connection to server
-                    server_answer_socket.close()
+        if bye not in server_message:
+            if exist_message in server_message:
+                print(exist_message)
+            elif data == b'Im the new leader':
+                empty_return = ''
+                return empty_return
+            else:
+                split_server_answer_for_identity = server_message.split(" ")
+                self.own_identity = split_server_answer_for_identity[1]
+        elif success_message_for_receiver in server_message:
+            print('yes it does work')
 
-        except socket.timeout:
+        else:
+            print('ist angekommen')
 
-            return server_timeout_message
+        output = str(server_message)
+
+        
+        server_answer_socket.close()
+        print("socket closed")
+        return output
+        
+                
 
     # As long as the identity isn't changed it is your identity for the Servers
     # if the identity get changed the servers change it as well after receiving the message with the new name
-    def get_acquainted_with_server(self):
+    def get_acquainted_with_server(self, flag):
         # makes it possible for the User to give his own identity to the Servers and enables a communication
         # with himself, because other users can find that name and send a message to this name
-        identity = input('What is your identity name: ')
-        broadcast_discovery_socket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-        broadcast_discovery_socket.setsockopt(SOL_SOCKET, SO_BROADCAST, 1)
 
-        try:
-            sender_bytes = identity.encode('ascii')
-            broadcast_discovery_socket.sendto(sender_bytes, ('255.255.255.255', dynamic_discovery_portNr))
-            broadcast_discovery_socket.close()
-            server_message = self.handle_server_answers()
-            print('\n')
-            print(server_message)
-            print('\n')
-        finally:
-            pass
+        if flag == True:
+            identity = input('What is your identity name: ')
+            broadcast_discovery_socket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+            broadcast_discovery_socket.setsockopt(SOL_SOCKET, SO_BROADCAST, 1)
+
+            try:
+                sender_bytes = identity.encode('ascii')
+                broadcast_discovery_socket.sendto(sender_bytes, ('255.255.255.255', dynamic_discovery_portNr))
+                broadcast_discovery_socket.close()
+                server_message = self.handle_server_answers()
+                print('\n')
+                print(server_message)
+                print('\n')
+            except:
+                broadcast_discovery_socket.close()
+            
+        else:
+            broadcast_discovery_socket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+            broadcast_discovery_socket.setsockopt(SOL_SOCKET, SO_BROADCAST, 1)
+
+            try:
+                message_after_new_leader = self.own_identity
+                sender_bytes = message_after_new_leader.encode('ascii')
+                broadcast_discovery_socket.sendto(sender_bytes, ('255.255.255.255', dynamic_discovery_portNr))
+                broadcast_discovery_socket.close()
+                server_message = self.handle_server_answers()
+            except:
+                print("message after new leader")
+                broadcast_discovery_socket.close()
+            finally:
+                pass
 
     # This method enables to chat with other users, if you know their name.
     # It is possible to send a message to one other user, if you know his identity name, this is what you ask for in
@@ -179,6 +203,7 @@ class Client:
         # The user should type in the name of the users he wants the message to be sent to
         self.add_receiver()
         receiver_name_string = self.name_of_receiver
+        print(receiver_name_string)
 
         # Build up the socket for the
         send_message_socket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
@@ -189,9 +214,10 @@ class Client:
             sender_bytes = receiver_name_string.encode('ascii')
             send_message_socket.sendto(sender_bytes, ('255.255.255.255', send_multicast_request_port))
             send_message_socket.close()
+            print("send message")
             self.name_of_receiver = ''
             server_message = self.handle_server_answers()
-
+    
             # Check the message of the server
             if success_message_for_receiver in server_message:
                 # Get the address of the server out of the server message
@@ -206,7 +232,30 @@ class Client:
                 print(server_timeout_message)
 
         finally:
+            send_message_socket.close()
             pass
+
+    # This method is used to ensure that a leader change doesn't effect the clients
+    def get_info_about_new_leader(self):
+
+        leader_info_multicast_socket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM, socket.IPPROTO_UDP)
+        leader_info_multicast_socket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+
+        leader_info_multicast_socket.bind(('', multicast_port_for_leader_info))
+        mreq = struct.pack('4sl', socket.inet_aton(multicast_group_ip_leader_info), socket.INADDR_ANY)
+
+        leader_info_multicast_socket.setsockopt(socket.IPPROTO_IP, socket.IP_ADD_MEMBERSHIP, mreq)
+
+        while True:
+            try:
+                message = leader_info_multicast_socket.recv(multicast_message_buffer)
+
+                if message != b'':
+                    str_message = str(message)
+                    self.get_acquainted_with_server(False)
+
+            except:
+                pass
 
     # This method is used to get multicast messages by other users
     def get_message_by_other_user_multicast(self):
@@ -222,7 +271,7 @@ class Client:
         while True:
             try:
                 message = multicast_get_message_socket.recv(multicast_message_buffer)
-                if message !=b'':
+                if message != b'':
                     str_message = str(message)
                     str_message_splitted = str_message.split("'")
                     print_message = str_message_splitted[1]
@@ -232,7 +281,6 @@ class Client:
 
             except:
                 print("Error while receiving message")
-        
 
     # This method is used to end the program and ensure that the identity is removed from user List on server
     def end_the_program(self):
@@ -256,12 +304,12 @@ class Client:
                     for_exit_message = self.handle_server_answers()
                     if system_exit_test_string in for_exit_message:
                         print('\n')
-                        print('End program was successful')
+                        print('End program was successful, you can terminate the program')
                         print('\n')
                         break
                     else:
                         print('\n')
-                        print('End program wasnt successful, please try again!')
+                        print('End program wasnt successful, please dont terminate the program ')
                         print('\n')
                         break
                 finally:
@@ -280,12 +328,13 @@ class Client:
             choice = input('Your choice: ')
             print('')
             if choice == '1':
-                self.get_acquainted_with_server()
+                send_flag = True
+                self.get_acquainted_with_server(send_flag)
             elif choice == '2':
                 self.send_a_message_to_other_clients()
             elif choice == '3':
                 self.stop_event.set()
-                #print("Stop val")
-                #print(self.stop_event.is_set())
+                # print("Stop val")
+                # print(self.stop_event.is_set())
                 self.end_the_program()
                 break

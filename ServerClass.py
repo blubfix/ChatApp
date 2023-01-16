@@ -46,6 +46,7 @@ multicast_neighbour_group_ip = '224.1.3.1'
 multicast_port_for_messages = 52153
 multicast_port_for_neighbours = 52154
 multicast_message_buffer = 10240
+multicast_port_for_leader_info = 52155
 
 
 # The Server class contains the functionalities of the server
@@ -64,16 +65,16 @@ class Server:
         self.actualTime = 0
         self.my_neighbour = ''
         self.election_message = {"mid": my_own_ip_address, "isLeader": False}
-        self.lcrActiveFlag=False
+        self.lcrActiveFlag = False
 
     def detection_of_dead_leader(self):
         while True:
-            #print("leader" + str(self.leader) +" LCR ACTIVE: " + str(self.lcrActiveFlag))
-            
+            # print("leader" + str(self.leader) +" LCR ACTIVE: " + str(self.lcrActiveFlag))
+
             if self.leader != True:
                 if self.lcrActiveFlag != True:
                     self.actualTime = time()
-                    
+
                     leader_death_time = 15
 
                     if ((self.actualTime - self.lastMessageTime) >= leader_death_time):
@@ -99,8 +100,8 @@ class Server:
             try:
                 message = multicast_neighbour_listener_socket.recv(multicast_message_buffer)
                 str_message = str(message)
-                #print("Listener ____")
-                #print(message)
+                # print("Listener ____")
+                # print(message)
                 neighbour_list = str_message.replace('b', "")
                 # print(neighbour_list)
                 neighbour_list = neighbour_list.replace('"', "")
@@ -110,7 +111,7 @@ class Server:
                 # print(temp2_user_list)
                 neighbour_list = neighbour_list.replace("[", "")
 
-                #print(neighbour_list)
+                # print(neighbour_list)
 
             except:
                 pass
@@ -120,8 +121,8 @@ class Server:
 
         multicast_socket_for_neighbours = socket.socket(socket.AF_INET, socket.SOCK_DGRAM, socket.IPPROTO_UDP)
         multicast_socket_for_neighbours.setsockopt(socket.IPPROTO_IP, socket.IP_MULTICAST_TTL, ttl)
-        stringMessage = str(message)
-        send_message = stringMessage.encode('ascii')
+        string_message = str(message)
+        send_message = string_message.encode('ascii')
 
         multicast_socket_for_neighbours.sendto(send_message, (ip, multicast_port_for_neighbours))
         addresses_to_send_to = ''
@@ -152,15 +153,32 @@ class Server:
         else:
             return None
 
+    # function to ensure that the clients dont get problems when chatting after a leader change
+
+    def leader_change_message_for_clients(self):
+        ttl = 2
+        after_leader_election_multicast_socket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM, socket.IPPROTO_UDP)
+        after_leader_election_multicast_socket.setsockopt(socket.IPPROTO_IP, socket.IP_MULTICAST_TTL, ttl)
+        message_about_new_leader_string = 'New Leader was voted'
+        message_about_new_leader_ascii = message_about_new_leader_string.encode('ascii')
+
+        for element in self.user_list:
+            str_element = str(element)
+            element_guts_list = str_element.split("'")
+            user_list_element_address = str(element_guts_list[3])
+            after_leader_election_multicast_socket.sendto(message_about_new_leader_ascii,
+                                                          (user_list_element_address, multicast_port_for_leader_info))
+            str_element = ''
+
     def start_lcr(self):
-        self.server_list=[]
+        self.server_list = []
         sleep(3)
         lcr_begin_socket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
         x = self.election_message
-        #print(json.dumps(x))
-        lcr_begin_socket.sendto((json.dumps(self.election_message).encode()), (self.my_neighbour,lcr_port))
+        # print(json.dumps(x))
+        lcr_begin_socket.sendto((json.dumps(self.election_message).encode()), (self.my_neighbour, lcr_port))
         print('lcr was started')
-        self.lcrActiveFlag=True
+        self.lcrActiveFlag = True
         print(self.lcrActiveFlag)
         pass
 
@@ -169,56 +187,53 @@ class Server:
         lcr_listener_socket.bind((my_own_ip_address, lcr_port))
         participant = False
         leader_uid = ''
-        while True: 
+        while True:
 
             if self.leader != True:
-                if(self.lcrActiveFlag == True):
+                if (self.lcrActiveFlag == True):
                     print("lcr active")
-                    
+
                     data, address = lcr_listener_socket.recvfrom(buffer_size)
                     message_with_election = json.loads(data.decode())
-                    #print(message_with_election)
+                    # print(message_with_election)
                     if message_with_election['isLeader']:
-                        print("isLeader^1")
-                        #print(self.my_neighbour)
+                        # print(self.my_neighbour)
                         leader_ip = message_with_election['mid']
                         participant = False
-                        lcr_listener_socket.sendto((json.dumps(message_with_election).encode()), (self.my_neighbour,lcr_port))
+                        lcr_listener_socket.sendto((json.dumps(message_with_election).encode()),
+                                                   (self.my_neighbour, lcr_port))
                         self.lcrActiveFlag = False
 
-                    
-
-                    if message_with_election['mid']<my_own_ip_address and not participant:
-                        print("mid^1")
-                        #print(self.my_neighbour)
+                    if message_with_election['mid'] < my_own_ip_address and not participant:
+                        # print(self.my_neighbour)
                         new_election_message = self.election_message
                         participant = True
-                        lcr_listener_socket.sendto((json.dumps(new_election_message).encode()), (self.my_neighbour,lcr_port))
+                        lcr_listener_socket.sendto((json.dumps(new_election_message).encode()),
+                                                   (self.my_neighbour, lcr_port))
 
-                    elif message_with_election['mid']>my_own_ip_address:
-                        print("mid^2")
-                        #print(self.my_neighbour)
+                    elif message_with_election['mid'] > my_own_ip_address:
+                        # print(self.my_neighbour)
                         participant = True
-                        lcr_listener_socket.sendto((json.dumps(message_with_election).encode()), (self.my_neighbour,lcr_port))
-                        self.lcrActiveFlag=False
-                    elif message_with_election['mid']==my_own_ip_address:
-                        print("mid^3")
-                        #print(self.my_neighbour)
+                        lcr_listener_socket.sendto((json.dumps(message_with_election).encode()),
+                                                   (self.my_neighbour, lcr_port))
+                        self.lcrActiveFlag = False
+                    elif message_with_election['mid'] == my_own_ip_address:
+                        # print(self.my_neighbour)
                         leader_uid = my_own_ip_address
                         new_election_message = {"mid": my_own_ip_address, "isLeader": True}
                         participant = False
-                        lcr_listener_socket.sendto((json.dumps(new_election_message).encode()), (self.my_neighbour,lcr_port))
-                        print("leader")
-                        print(self.leader)
-                        self.leader=True
+                        lcr_listener_socket.sendto((json.dumps(new_election_message).encode()),
+                                                   (self.my_neighbour, lcr_port))
+                        self.leader = True
                         print("leader")
                         print(self.leader)
                         self.lcrActiveFlag = False
-                        print("leader true")
-                        
-                    else:
-                        print("its smth else")
+                        self.leader_change_message_for_clients()
+                        # the function ensures that the client starts a new discovery and open sockets to the old leader
+                        # gets closed
 
+                    else:
+                        pass
 
     # The method update_list is used to send the updated user list to all others servers in the distributed system
     def update_user_list(self):
@@ -233,9 +248,9 @@ class Server:
                     try:
                         send_string_with_user = ''.join(str(element) for element in self.user_list)
                         user_list_in_ascii = send_string_with_user.encode('ascii')
-                        update_list_send_socket.sendto(user_list_in_ascii, ('255.255.255.255', list_update_broadcast_port))
+                        update_list_send_socket.sendto(user_list_in_ascii,
+                                                       ('255.255.255.255', list_update_broadcast_port))
                         send_string_with_user = ''
-                        print('Liste mit Inhalt versendet')
 
                     except:
                         print('update List Error')
@@ -246,7 +261,8 @@ class Server:
                     try:
                         send_string_with_user = '1'
                         user_list_in_ascii = send_string_with_user.encode('ascii')
-                        update_list_send_socket.sendto(user_list_in_ascii, ('255.255.255.255', list_update_broadcast_port))
+                        update_list_send_socket.sendto(user_list_in_ascii,
+                                                       ('255.255.255.255', list_update_broadcast_port))
                         send_string_with_user = ''
                         print('Leere Liste versendet')
                     except:
@@ -339,13 +355,12 @@ class Server:
     def listen_to_server_list_update(self):
         startTime = time()
         while True:
-            if((time()-startTime)>=10):
-                startTime=time()
-                self.server_list=[]
+            if ((time() - startTime) >= 10):
+                startTime = time()
+                self.server_list = []
                 self.server_list.append(my_own_ip_address)
             if self.leader != True:
 
-                
                 server_list_update_listener_socket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
                 server_list_update_listener_socket.bind(('', server_list_update_broadcast_port))
 
@@ -438,6 +453,7 @@ class Server:
     def answer_client_via_tcp(self, address, message):
         # build up the TCP socket
         answer_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        print(address)
         answer_socket.connect((address, tcp_answer_port))
         answer_socket.setblocking(False)
 
@@ -495,113 +511,121 @@ class Server:
                         # Receives identification messages from clients
                         client_identification_message = client_listener_socket.recvfrom(buffer_size)
 
-                        # Process Data from Clients that only the name and the IP-Address is left
-                        str_client_identification_message = str(client_identification_message)
-                        split_identification_message = str_client_identification_message.split("'")
-                        identity_name = split_identification_message[1]
-                        identity_address = split_identification_message[3]
-                        user_identity = (identity_name, identity_address)
+                        if client_identification_message == b'Hello new leader':
+                            str_client_identification_message = str(client_identification_message)
+                            split_identification_message = str_client_identification_message.split("'")
+                            identity_address = split_identification_message[3]
+                            message_for_client_gets_new_leader = 'Im the new leader'
+                            self.answer_client_via_tcp(identity_address, message_for_client_gets_new_leader)
 
-                        # Different specific error and success messages
-                        success_msg_for_client = 'Hello {}, your identification was successful'.format(identity_name)
-                        success_msg_changed_name = 'Hello {}, your name was updated'.format(identity_name)
-                        error_msg_for_client = 'Excuse me, your name is already used, please tryout another name'
-                        error_msg_already_logged_in = 'Excuse me, your already logged in'
-                        general_error = 'Excuse me, an Error occurred'
+                        else:
+                            # Process Data from Clients that only the name and the IP-Address is left
+                            str_client_identification_message = str(client_identification_message)
+                            split_identification_message = str_client_identification_message.split("'")
+                            identity_name = split_identification_message[1]
+                            identity_address = split_identification_message[3]
+                            user_identity = (identity_name, identity_address)
 
-                        # load the data into a list containing all data of currently possible users and amke sure this list is
-                        # reliable, make sure it's not possible to have wrong data in this List
+                            # Different specific error and success messages
+                            success_msg_for_client = 'Hello {}, your identification was successful'.format(identity_name)
+                            success_msg_changed_name = 'Hello {}, your name was updated'.format(identity_name)
+                            error_msg_for_client = 'Excuse me, your name is already used, please tryout another name'
+                            error_msg_already_logged_in = 'Excuse me, your already logged in'
+                            general_error = 'Excuse me, an Error occurred'
 
-                        # Fehler hier, es ist möglich das ein Name zwei mal vorkommt
-                        # If the user address list is empty or just has 1 tupel inside, its not needed to iterate through
-                        if len(self.user_list) < 1:
+                            # load the data into a list containing all data of currently possible users and amke sure this list is
+                            # reliable, make sure it's not possible to have wrong data in this List
 
-                            # If the incoming address and name arent in any list do following
-                            if identity_address not in self.user_address_list and identity_name not in self.user_name_list:
-                                flag = True
-                                self.user_completely_unknown(user_identity, identity_address,
-                                                            identity_name, success_msg_for_client, flag)
-
-                            # If the identity name is in no list but the address occurs in list do following
-                            elif identity_name not in self.user_name_list and identity_address in self.user_address_list:
-                                self.only_user_address_is_known(user_identity, identity_address,
-                                                                identity_name, success_msg_changed_name)
-
-                            # If the identity is the same, the user is already logged in do following
-                            elif identity_name in self.user_name_list and identity_address in self.user_address_list:
-                                print(self.user_list)
-                                self.answer_client_via_tcp(identity_address, error_msg_already_logged_in)
-
-                            # If any other failure occurs just send a general error message
-                            else:
-                                print(self.user_list)
-                                self.answer_client_via_tcp(identity_address, general_error)
-
-                        # if there is more than one tupel inside user_list, it has to be iterated through, so the code has to be
-                        # different, because the in statement just works out for the first tupel and not for a whole list
-                        elif len(self.user_list) >= 1:
-                            # The decide string is extended by the user_list with each iteration.
-                            # This creates a string that can be examined for a substring and a message is sent according to
-                            # the substring that appears. This makes it possible to iterate through the entire user_list and
-                            # make sure that no name or address can get into the list more than once.
-                            # Thus the list remains reliable and can be used as an address book for the second client
-                            # functionality.
-                            decide_string = ''
-                            just_append = '1'
-                            remove_and_append = '2'
-                            name_already_used = '3'
-                            dont_append = '4'
-
-                            for user_list_element in self.user_list:
-                                str_user_list_element = str(user_list_element)
-                                splitted_user_list_element = str_user_list_element.split("'")
-                                user_list_element_name = str(splitted_user_list_element[1])
-                                user_list_element_address = str(splitted_user_list_element[3])
+                            # Fehler hier, es ist möglich das ein Name zwei mal vorkommt
+                            # If the user address list is empty or just has 1 tupel inside, its not needed to iterate through
+                            if len(self.user_list) < 1:
 
                                 # If the incoming address and name arent in any list do following
-                                if identity_name != user_list_element_name and identity_address != user_list_element_address:
-                                    decide_string = decide_string + just_append
+                                if identity_address not in self.user_address_list and identity_name not in self.user_name_list:
+                                    flag = True
+                                    self.user_completely_unknown(user_identity, identity_address,
+                                                                 identity_name, success_msg_for_client, flag)
 
                                 # If the identity name is in no list but the address occurs in list do following
-                                elif identity_name != user_list_element_name and identity_address == user_list_element_address:
-                                    decide_string = decide_string + remove_and_append
-                                    break
-
-                                # If a name is already used but the address is not known do following
-                                elif identity_name == user_list_element_name and identity_address != user_list_element_address:
-                                    decide_string = decide_string + name_already_used
-                                    break
+                                elif identity_name not in self.user_name_list and identity_address in self.user_address_list:
+                                    self.only_user_address_is_known(user_identity, identity_address,
+                                                                    identity_name, success_msg_changed_name)
 
                                 # If the identity is the same, the user is already logged in do following
-                                elif identity_name == user_list_element_name and identity_address == user_list_element_address:
-                                    decide_string = decide_string + dont_append
-                                    break
+                                elif identity_name in self.user_name_list and identity_address in self.user_address_list:
+                                    print(self.user_list)
+                                    self.answer_client_via_tcp(identity_address, error_msg_already_logged_in)
 
-                            # self.answer_client_via_tcp(identity_address, success_msg_for_client)
-                            if dont_append in decide_string:
-                                print(decide_string)
-                                print(self.user_list)
-                                decide_string = ''
-                                self.answer_client_via_tcp(identity_address, error_msg_already_logged_in)
+                                # If any other failure occurs just send a general error message
+                                else:
+                                    print(self.user_list)
+                                    self.answer_client_via_tcp(identity_address, general_error)
 
-                            elif remove_and_append in decide_string:
-                                print(decide_string)
+                            # if there is more than one tupel inside user_list, it has to be iterated through, so the code has to be
+                            # different, because the in statement just works out for the first tupel and not for a whole list
+                            elif len(self.user_list) >= 1:
+                                # The decide string is extended by the user_list with each iteration.
+                                # This creates a string that can be examined for a substring and a message is sent according to
+                                # the substring that appears. This makes it possible to iterate through the entire user_list and
+                                # make sure that no name or address can get into the list more than once.
+                                # Thus the list remains reliable and can be used as an address book for the second client
+                                # functionality.
                                 decide_string = ''
-                                self.only_user_address_is_known(user_identity, identity_address, identity_name,
-                                                                success_msg_changed_name)
+                                just_append = '1'
+                                remove_and_append = '2'
+                                name_already_used = '3'
+                                dont_append = '4'
 
-                            elif name_already_used in decide_string:
-                                print(decide_string)
-                                decide_string = ''
-                                print(self.user_list)
-                                self.answer_client_via_tcp(identity_address, error_msg_for_client)
+                                for user_list_element in self.user_list:
+                                    str_user_list_element = str(user_list_element)
+                                    splitted_user_list_element = str_user_list_element.split("'")
+                                    user_list_element_name = str(splitted_user_list_element[1])
+                                    user_list_element_address = str(splitted_user_list_element[3])
 
-                            else:
-                                print(decide_string)
-                                decide_string = ''
-                                flag = True
-                                self.user_completely_unknown(user_identity, identity_address, identity_name,
-                                                            success_msg_for_client, flag)
+                                    # If the incoming address and name arent in any list do following
+                                    if identity_name != user_list_element_name and identity_address != user_list_element_address:
+                                        decide_string = decide_string + just_append
+
+                                    # If the identity name is in no list but the address occurs in list do following
+                                    elif identity_name != user_list_element_name and identity_address == user_list_element_address:
+                                        decide_string = decide_string + remove_and_append
+                                        break
+
+                                    # If a name is already used but the address is not known do following
+                                    elif identity_name == user_list_element_name and identity_address != user_list_element_address:
+                                        decide_string = decide_string + name_already_used
+                                        break
+
+                                    # If the identity is the same, the user is already logged in do following
+                                    elif identity_name == user_list_element_name and identity_address == user_list_element_address:
+                                        decide_string = decide_string + dont_append
+                                        break
+
+                                # self.answer_client_via_tcp(identity_address, success_msg_for_client)
+                                if dont_append in decide_string:
+                                    print(decide_string)
+                                    print(self.user_list)
+                                    decide_string = ''
+                                    self.answer_client_via_tcp(identity_address, error_msg_already_logged_in)
+
+                                elif remove_and_append in decide_string:
+                                    print(decide_string)
+                                    decide_string = ''
+                                    self.only_user_address_is_known(user_identity, identity_address, identity_name,
+                                                                    success_msg_changed_name)
+
+                                elif name_already_used in decide_string:
+                                    print(decide_string)
+                                    decide_string = ''
+                                    print(self.user_list)
+                                    self.answer_client_via_tcp(identity_address, error_msg_for_client)
+
+                                else:
+                                    print(decide_string)
+                                    decide_string = ''
+                                    flag = True
+                                    self.user_completely_unknown(user_identity, identity_address, identity_name,
+                                                                 success_msg_for_client, flag)
 
                     finally:
                         pass
@@ -612,6 +636,7 @@ class Server:
             if self.leader == True:
                 message_receiver_handler_socket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
                 message_receiver_handler_socket.bind(('', receive_message_request_port))
+                print("Das da")
                 print(str(message_receiver_handler_socket))
 
                 while True:
@@ -655,7 +680,8 @@ class Server:
                         else:
 
                             self.answer_client_via_tcp(sender_ip_of_message, error_message_for_receiver)
-
+                    
+                  
                     finally:
                         pass
 
