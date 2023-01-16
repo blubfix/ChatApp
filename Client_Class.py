@@ -13,7 +13,7 @@ import time
 buffer_size = 1024
 
 # Port for Server answer
-server_answer_port_tcp = 50199
+server_answer_port_tcp = 50101
 
 # Port for system Exit Message
 system_exit_port_tcp = 51153
@@ -163,6 +163,7 @@ class Client:
         broadcast_discovery_socket.setsockopt(SOL_SOCKET, SO_BROADCAST, 1)
 
         try:
+            print(identity)
             sender_bytes = identity.encode('ascii')
             broadcast_discovery_socket.sendto(sender_bytes, ('255.255.255.255', dynamic_discovery_portNr))
             broadcast_discovery_socket.close()
