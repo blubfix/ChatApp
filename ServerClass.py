@@ -15,7 +15,7 @@ buffer_size = 1024
 client_listener_port = 49153
 
 # Port where to send success and error messages with tcp
-tcp_answer_port = 50153
+tcp_answer_port = 50199
 
 # Port for sending messages
 send_message_to_port = 50154
@@ -393,16 +393,18 @@ class Server:
 
         # To ensure that a multicast message is not accidentally sent across the internet, a maximum number of server
         # hops is set. In this case, the maximum is 2 hops.
+        print("multicast_message_for_receiver")
         ttl = 2
 
         multicast_socket_for_messages = socket.socket(socket.AF_INET, socket.SOCK_DGRAM, socket.IPPROTO_UDP)
         multicast_socket_for_messages.setsockopt(socket.IPPROTO_IP, socket.IP_MULTICAST_TTL, ttl)
+        
         send_message = message.encode('ascii')
         addresses_to_send_to = ''
-
+        print("multicast socket")
         for element in self.list_of_receiver_of_messages:
             addresses_to_send_to = element[1]
-
+            print(addresses_to_send_to)
             multicast_socket_for_messages.sendto(send_message, (addresses_to_send_to, multicast_port_for_messages))
             addresses_to_send_to = ''
 
@@ -411,40 +413,49 @@ class Server:
     # This method is used to receive the message of a client that wants to sent a message to one or more other Clients
     def tcp_answer_client_about_receivers_are_available(self):
         # build up TCP socket
+        print("tcp_answer_client_about_receivers_are_available")
         tcp_socket_for_messages = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         tcp_socket_for_messages.bind((my_own_ip_address, receive_the_message_with_tcp_port))
         tcp_socket_for_messages.listen()
-
+        print("socket binded")
         # set timeout to 10
         timeout_for_client_answer = 10
         tcp_socket_for_messages.settimeout(timeout_for_client_answer)
 
         new_socket_for_connection, address_of_client = tcp_socket_for_messages.accept()
+        print("New socket")
         while True:
             try:
                 data_with_message = new_socket_for_connection.recv(buffer_size)
+                print("data_with_message")
+                print(data_with_message)
                 str_data_with_message = str(data_with_message)
                 str_data_with_message = str_data_with_message.split("'")
                 prepared_message = str_data_with_message[1]
                 print(prepared_message)
 
                 # was auch immer mit der Nachricht gemacht wird, dannach muss diese entsprechende Funktion aufgerufen werden
+                
                 self.multicast_message_for_receiver(prepared_message)
                 break
-            except:
+            except Exception as e:
                 print('Error Line 116')
+                print(e)
 
     # Method is used for message response via tcp to a client action
     def answer_client_via_tcp(self, address, message):
+        print("answer_client_via_tcp")
+        print(address)
         # build up the TCP socket
         answer_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         answer_socket.connect((address, tcp_answer_port))
         answer_socket.setblocking(False)
-
+        print("connection established")
         # the given answer for client is sent
         send_answer = message.encode('ascii')
         answer_socket.sendall(send_answer)
         answer_socket.close()
+        print("answer socket closed")
 
         # This method is used to have a better structured code. It is used when a user is not known for the server
 
@@ -610,6 +621,7 @@ class Server:
     def message_receiver_handler(self):
         while True:
             if self.leader == True:
+                print("Message receiver handler")
                 message_receiver_handler_socket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
                 message_receiver_handler_socket.bind(('', receive_message_request_port))
                 print(str(message_receiver_handler_socket))
@@ -647,17 +659,22 @@ class Server:
                                     break
 
                         if test_list_for_comparison == filtered_list_of_receiver:
+                            print("test_list_for_comparison == filtered_list_of_receiver")
+                            print(sender_ip_of_message)
+                            print(success_message_for_receiver)
                             self.answer_client_via_tcp(sender_ip_of_message, success_message_for_receiver)
+
                             self.tcp_answer_client_about_receivers_are_available()
 
 
 
                         else:
-
+                            
                             self.answer_client_via_tcp(sender_ip_of_message, error_message_for_receiver)
 
-                    finally:
-                        pass
+                    except Exception as e:
+                        print("Exception in: message_receiver_handler")
+                        print(e)
 
     # When the Client stops running it has to be removed from the user list
     def client_listener_for_system_exit(self):

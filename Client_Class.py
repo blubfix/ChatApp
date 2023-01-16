@@ -13,7 +13,7 @@ import time
 buffer_size = 1024
 
 # Port for Server answer
-server_answer_port_tcp = 50153
+server_answer_port_tcp = 50199
 
 # Port for system Exit Message
 system_exit_port_tcp = 51153
@@ -107,9 +107,11 @@ class Client:
     # Method that is needed for responding to tcp message sent by server to a Client
     def handle_server_answers(self):
         try:
+            print("handle_server_answers")
             server_answer_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
             server_answer_socket.bind((my_own_ip_address, server_answer_port_tcp))
             server_answer_socket.listen()
+            print("server_answer_socket binded")
             timeout_for_serverconnection = 5
             server_answer_socket.settimeout(timeout_for_serverconnection)
 
@@ -117,13 +119,14 @@ class Client:
             while True:
                 try:
                     # get data from Server
+                    print("handle_server_answers while true")
                     data = connection.recv(buffer_size)
                     str_server_answer_for_request = str(data)
-
+                    print("data")
                     # split message for output on consol
                     split_server_answer_for_request = str_server_answer_for_request.split("'")
                     server_message = split_server_answer_for_request[1]
-
+                    print(server_message)
                     # messages to be checked
                     bye = 'Bye'
                     exist_message = 'The user exist'
@@ -132,21 +135,23 @@ class Client:
                         if exist_message in server_message:
                             print(exist_message)
                         else:
+                            print("bye not in server and exist message not in server_message")
                             split_server_answer_for_identity = server_message.split(" ")
                             self.own_identity = split_server_answer_for_identity[1]
                     elif success_message_for_receiver in server_message:
                         print('yes it does work')
 
+
                     output = str(server_message)
                     server_answer_socket.close()
                     return output
-                finally:
-                    # Close connection to server
-                    server_answer_socket.close()
+                except Exception as e:
+                    print("Exception in: handle_server_answer")
+                    print(e)
 
-        except socket.timeout:
-
-            return server_timeout_message
+        except Exception as e:
+            print("Exception in: handle_server_answer outer try/except")
+            print(e)
 
     # As long as the identity isn't changed it is your identity for the Servers
     # if the identity get changed the servers change it as well after receiving the message with the new name
@@ -186,14 +191,19 @@ class Client:
 
         try:
             # Send the request with the list of possible receiver to the server for check the receivers
+            print("start communication")
             sender_bytes = receiver_name_string.encode('ascii')
             send_message_socket.sendto(sender_bytes, ('255.255.255.255', send_multicast_request_port))
+            print("send_message_socket.sendto")
             send_message_socket.close()
+            print("socket close")
             self.name_of_receiver = ''
             server_message = self.handle_server_answers()
+            print("handle server answers done")
 
             # Check the message of the server
             if success_message_for_receiver in server_message:
+                print("success_message_for_receiver in server_message")
                 # Get the address of the server out of the server message
                 splitted_server_message = server_message.split(',')
                 address_of_server_to_communicate = splitted_server_message[1]
@@ -201,12 +211,16 @@ class Client:
                 # Send the message that should be sent to the other users to the server, that performs the multicast
                 self.method_to_send_messages(address_of_server_to_communicate, message_to_be_sent)
             elif server_message == error_message_for_receiver:
+                print("server_message == error_message_for_receiver")
                 print(server_message)
             else:
+                print("timeout")
                 print(server_timeout_message)
+                
+        except Exception as e:
+            print("Exception in: send_a_message_to_other_clients")
+            print(e)
 
-        finally:
-            pass
 
     # This method is used to get multicast messages by other users
     def get_message_by_other_user_multicast(self):
