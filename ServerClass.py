@@ -15,7 +15,7 @@ buffer_size = 1024
 client_listener_port = 49153
 
 # Port where to send success and error messages with tcp
-tcp_answer_port = 50199
+tcp_answer_port = 50101
 
 # Port for sending messages
 send_message_to_port = 50154

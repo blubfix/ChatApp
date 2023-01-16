@@ -13,7 +13,7 @@ import time
 buffer_size = 1024
 
 # Port for Server answer
-server_answer_port_tcp = 50199
+server_answer_port_tcp = 50101
 
 # Port for system Exit Message
 system_exit_port_tcp = 51153
@@ -207,7 +207,7 @@ class Client:
                 # Get the address of the server out of the server message
                 splitted_server_message = server_message.split(',')
                 address_of_server_to_communicate = splitted_server_message[1]
-
+                print(address_of_server_to_communicate)
                 # Send the message that should be sent to the other users to the server, that performs the multicast
                 self.method_to_send_messages(address_of_server_to_communicate, message_to_be_sent)
             elif server_message == error_message_for_receiver:
