@@ -109,7 +109,7 @@ class Client:
         try:
             print("handle_server_answers")
             server_answer_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-            server_answer_socket.bind((my_own_ip_address, server_answer_port_tcp))
+            server_answer_socket.bind(('', server_answer_port_tcp))
             server_answer_socket.listen()
             print("server_answer_socket binded")
             timeout_for_serverconnection = 5
